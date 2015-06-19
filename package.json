@@ -1,5 +1,5 @@
 {
-  "name": "diffit",
+  "name": "wson-diff",
   "version": "0.1.0",
   "description": "Object diff and patch",
   "main": "index.js",
@@ -13,17 +13,18 @@
     "email": "office@tapirdata.com",
     "url": "https://github.com/tapirdata"
   },
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "ssh://and@git.tapirdata.com/data/git/prj/tapirdata/npm/diffit.git"
+    "url": "https://github.com/tapirdata/wson-diff"
   },
-  "license": "ISC",
   "devDependencies": {
     "chai": "^3.0.0",
     "coffee-script": "^1.9.3",
     "mocha": "^2.2.5"
   },
   "dependencies": {
-    "lodash": "^3.9.3"
+    "lodash": "^3.9.3",
+    "mdiff": "^0.2.3"
   }
 }
