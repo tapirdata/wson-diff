@@ -49,8 +49,15 @@ class State
     @up = @up[@key]
     @key = key  
 
-  push: (stage) ->
-    new State @str, @up, @key, stage, @
+  push: (stage, howNext) ->
+    state = new State @str, @up, @key, stage, @
+    state.howNext = howNext
+    state
+
+  pop: (stage, howNext) ->
+    if not @parent?
+      throw new PrePatchError()
+    @parent
 
   setValue: (value) ->
     debug 'setValue @up=%o, @key=%o value=%o', @up, @key, value
@@ -76,9 +83,6 @@ stages =
       @enterPath value
       @stage = stages.pathHas
       @
-    # '{': ->
-    #   @stage = stages.scopeHas
-    #   @push stage.pathBegin
   pathHas: 
     '|': ->
       @stage = stages.pathNext
@@ -86,6 +90,9 @@ stages =
     ':': ->
       @stage = stages.scopeAssign
       @
+    '{': ->
+      @stage = stages.scopeHas
+      @push stages.pathBegin, true
   scopeAssign: 
     value: (value) ->
       @setValue value
@@ -96,6 +103,8 @@ stages =
       @resetPath()
       @stage = stages.pathBegin
       @
+    '}': ->
+      @pop()
     end: ->
       if @parent?
         throw new PrePatchError()

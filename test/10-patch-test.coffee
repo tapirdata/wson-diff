@@ -40,7 +40,7 @@ for setup in require './fixtures/setups'
               catch e_
                 e = e_
               expect(e).to.be.instanceof wsonDiff.PatchError
-              # expect(e.pos).to.be.equal item.failPos
+              expect(e.pos).to.be.equal item.failPos
           else
             it "should patch #{saveRepr target} with '#{item.str}' to #{saveRepr item.new}.", ->
               expect(patcher.patch target, item.str).to.be.deep.equal item.new
