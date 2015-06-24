@@ -49,12 +49,12 @@ class State
     @up = @up[@key]
     @key = key  
 
-  push: (stage, howNext) ->
+  push: (stage, rawNext) ->
     state = new State @str, @up, @key, stage, @
-    state.howNext = howNext
+    state.rawNext = rawNext
     state
 
-  pop: (stage, howNext) ->
+  pop: (stage, rawNext) ->
     if not @parent?
       throw new PrePatchError()
     @parent
@@ -65,6 +65,21 @@ class State
     debug 'setValue ok'
     return
 
+  startScope: ->
+    @stage = stages.scopeHas
+    @push stages.pathBegin, true
+
+  startModify: ->
+    c = @str[++@pos]
+    debug 'startModify c=%o', c
+    switch c
+      when '-'
+        @stage = stages.deleteNext
+      else 
+        throw new PrePatchError()
+    @rawNext = true
+    @skipNext = 1
+    @
 
 stages = 
   pathBegin: 
@@ -78,11 +93,21 @@ stages =
     ':': ->
       @stage = stages.scopeAssign
       @
+    '{': ->
+      @startScope()
+    '[': ->
+      @startModify()
+    '}': ->
+      @pop()
   pathNext: 
     value: (value) ->
       @enterPath value
       @stage = stages.pathHas
       @
+    '{': ->
+      @startScope()
+    '[': ->
+      @startModify()
   pathHas: 
     '|': ->
       @stage = stages.pathNext
@@ -91,8 +116,9 @@ stages =
       @stage = stages.scopeAssign
       @
     '{': ->
-      @stage = stages.scopeHas
-      @push stages.pathBegin, true
+      @startScope()
+    '[': ->
+      @startModify()
   scopeAssign: 
     value: (value) ->
       @setValue value
@@ -103,32 +129,20 @@ stages =
       @resetPath()
       @stage = stages.pathBegin
       @
+    '{': ->
+      @startScope()
+    '[': (value, prevPos, nextPos) ->
+      @startModify nextPos
     '}': ->
       @pop()
     end: ->
       if @parent?
         throw new PrePatchError()
+  deleteNext:
+    ']': ->
+      @stage = stages.scopeHas
+      @
 
-
-    # '{': ->
-    #   @stage = stages.scopeNext
-    #   @
-    # ':': ->
-    #   @stage = stages.setTarget
-    #   @howNext = 're'
-    #   @
-  # scopeNext:
-  #   value: -> 
-  #     @stage = stages.pathNext
-  #     @howNext = 're'
-  #     @
-  #   '}': ->
-  #     @stage = stages.scopeEnd
-  #     @
-  # scopeEnd: {}
-
-
-  # end: {}
 
 do ->
   for name, stage of stages
@@ -148,10 +162,9 @@ class Patcher
       up = _: target 
 
       state = new State str, up, '_', stages.pathNext
-      prevPos = 1
-      howNext = [true, 1]
+      state.pos = 1
      
-      @wsonDiff.WSON.parsePartial str, howNext, (isValue, value, nextPos) ->
+      @wsonDiff.WSON.parsePartial str, [true, 1], (isValue, value, nextPos) ->
         stage = state.stage
         debug 'patch: stage=%o, isValue=%o, value=%o, nextPos=%o', stage.name, isValue, value, nextPos
         if isValue
@@ -161,16 +174,21 @@ class Patcher
         if not handler  
           handler = stage.default
         if not handler  
-          throw new PatchError str, prevPos
+          throw new PatchError str, state.pos
         debug 'patch: handler=%o', handler
-        state.howNext = true
-        state = handler.call state, value, prevPos, nextPos
-        prevPos = nextPos
-        debug 'patch: howNext=%o, stage=%o', state.howNext, state.stage.name
-        return state.howNext
+        state.rawNext = true
+        state.skipNext = 0
+        state = handler.call state, value, nextPos
+        debug 'patch: rawNext=%o, skipNext=%o, stage=%o', state.rawNext, state.skipNext, state.stage.name
+        state.pos = nextPos
+        if state.skipNext > 0
+          state.pos += state.skipNext
+          return [state.rawNext, state.skipNext]
+        else  
+          return state.rawNext
         
       debug 'patch: done: stage=%o', state.stage.name
-      prevPos = str.length
+      state.pos = str.length
       handler = state.stage.end
       if not handler  
         throw new PatchError str
@@ -180,11 +198,11 @@ class Patcher
 
     catch error
       if error instanceof PrePatchError
-        throw new PatchError str, prevPos, error.cause
+        throw new PatchError str, state.pos, error.cause
       else if error instanceof wson.ParseError
         throw new PatchError error.s, error.pos, error.cause
       else
-        throw new PatchError str, prevPos, error
+        throw new PatchError str, state.pos, error
 
 
 factory = (options) ->
