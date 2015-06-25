@@ -33,11 +33,12 @@ class WsonDiff
   constructor: ->
     @WSON = wson(useAddon: true)
 
-  createPatcher: ->  
+  createPatcher: ->
     new Patcher @
 
 
-reIndex = /^\d+$/    
+reIndex = /^\d+$/
+reRange = /^(\d+)(~(\d+))?$/
 
 SCALAR = 1
 OBJECT = 2
@@ -70,20 +71,23 @@ class Target
         OBJECT
       else
         SCALAR
-    type    
+    type
 
   enterPath: (key) ->
     type = @getType()
     debug 'enterPath value=%o type=%o, key=%o', @value, type, key
-    if type == SCALAR
-      throw new PrePatchError "can't index scalar #{@value}"
-    if type == ARRAY
-      if not reIndex.test key
-        throw new PrePatchError "non-numeric index #{key} for array #{@value}"
-      key = Number key
+    switch type
+      when ARRAY
+        if not reIndex.test key
+          throw new PrePatchError "non-numeric index #{key} for array #{@value}"
+        index = Number key
+      when OBJECT
+        index = key
+      else
+        throw new PrePatchError "can't index scalar #{@value}"
     @up = @up[@key]
-    @value = @up[key]
-    @key = key  
+    @value = @up[index]
+    @key = index
     @_type = null
     return
 
@@ -94,13 +98,29 @@ class Target
     debug 'setValue ok'
     return
 
+  deleteKey: (key) ->
+    debug 'deleteKey @value=%o, value=%o', @value, key
+    type = @getType()
+    switch type
+      when ARRAY
+        m = reRange.exec key
+        if not m?
+          throw new PrePatchError "ill-formed range '#{key}'"
+        index = Number m[1]
+        len = if m[3]? then Number m[3] else 1
+        @value.splice index, len
+      when OBJECT
+        delete @value[key]
+      else
+        throw new PrePatchError "can't delete from scalar #{@value}"
+    return
 
 class State
 
   constructor: (@str, @baseTarget, @stage, @parent) ->
     @target = new Target()
     @resetPath()
-    debug 'State %o', @ 
+    debug 'State %o', @
 
   resetPath: ->
     @target.reset @baseTarget
@@ -124,15 +144,15 @@ class State
     debug 'startModify c=%o', c
     switch c
       when '-'
-        @stage = stages.deleteNext
-      else 
+        @stage = stages.deleteBegin
+      else
         throw new PrePatchError()
     @rawNext = true
     @skipNext = 1
     @
 
-stages = 
-  pathBegin: 
+stages =
+  pathBegin:
     value: (value) ->
       @target.enterPath value
       @stage = stages.pathHas
@@ -153,7 +173,7 @@ stages =
       @startModify()
     '}': ->
       @pop()
-  pathNext: 
+  pathNext:
     value: (value) ->
       @target.enterPath value
       @stage = stages.pathHas
@@ -166,7 +186,7 @@ stages =
       @startScope()
     '[': ->
       @startModify()
-  pathHas: 
+  pathHas:
     '|': ->
       @stage = stages.pathNext
       @
@@ -177,12 +197,12 @@ stages =
       @startScope()
     '[': ->
       @startModify()
-  scopeAssign: 
+  scopeAssign:
     value: (value) ->
       @target.setValue value
       @stage = stages.scopeHas
       @
-  scopeHas: 
+  scopeHas:
     '|': ->
       @resetPath()
       @stage = stages.pathBegin
@@ -196,9 +216,33 @@ stages =
     end: ->
       if @parent?
         throw new PrePatchError()
-  deleteNext:
+  deleteBegin:
+    value: (value) ->
+      @target.deleteKey value
+      @stage = stages.deleteHas
+      @
+    '#': ->
+      @target.deleteKey ''
+      @stage = stages.deleteHas
+      @
     ']': ->
       @stage = stages.scopeHas
+      @
+  deleteNext:
+    value: (value) ->
+      @target.deleteKey value
+      @stage = stages.deleteHas
+      @
+    '#': ->
+      @target.deleteKey ''
+      @stage = stages.deleteHas
+      @
+  deleteHas:
+    ']': ->
+      @stage = stages.scopeHas
+      @
+    '|': ->
+      @stage = stages.deleteNext
       @
 
 
@@ -220,7 +264,7 @@ class Patcher
       target = new Target _: target, '_'
       state = new State str, target, stages.pathNext
       state.pos = 1
-     
+
       @wsonDiff.WSON.parsePartial str, [true, 1], (isValue, value, nextPos) ->
         stage = state.stage
         debug 'patch: stage=%o, isValue=%o, value=%o, nextPos=%o', stage.name, isValue, value, nextPos
@@ -228,9 +272,9 @@ class Patcher
           handler = stage.value
         else
           handler = stage[value]
-        if not handler  
+        if not handler
           handler = stage.default
-        if not handler  
+        if not handler
           throw new PatchError str, state.pos
         debug 'patch: handler=%o', handler
         state.rawNext = true
@@ -241,13 +285,13 @@ class Patcher
         if state.skipNext > 0
           state.pos += state.skipNext
           return [state.rawNext, state.skipNext]
-        else  
+        else
           return state.rawNext
-        
+
       debug 'patch: done: stage=%o', state.stage.name
       state.pos = str.length
       handler = state.stage.end
-      if not handler  
+      if not handler
         throw new PatchError str
       handler.call state
 
@@ -266,7 +310,7 @@ class Patcher
 factory = (options) ->
   new WsonDiff options
 
-factory.PatchError = PatchError  
+factory.PatchError = PatchError
 
 module.exports = factory
 

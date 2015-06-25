@@ -127,4 +127,47 @@ module.exports = [
     failPos: 1
     failCause: /non-numeric index/
   }
+  # delete
+  {
+    old: {beff: {foo: 'FOO', bar: 'BAR'}}
+    str: '|beff[-bar]'
+    new: {beff: {foo: 'FOO'}}
+  }
+  {
+    old: {beff: {foo: 'FOO', bar: 'BAR'}}
+    str: '|beff[-bar|foo]'
+    new: {beff: {}}
+  }
+  {
+    old: {beff: {foo: 'FOO', bar: 'BAR'}}
+    str: '|[-beff]'
+    new: {}
+  }
+  {
+    old: {beff: {foo: 'FOO', bar: 'BAR', '': 'NIL'}}
+    str: '|beff[-#|foo]'
+    new: {beff: {bar: 'BAR'}}
+  }
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[-1]'
+    new: {beff: ['a', 'c', 'd', 'e', 'f', 'g']}
+  }
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[-1|3]'
+    new: {beff: ['a', 'c', 'd', 'f', 'g']}
+  }
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[-1~2|2~2]'
+    new: {beff: ['a', 'd', 'g']}
+  }
+  # delete fail
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[-a]'
+    failPos: 7
+    failCause: /ill-formed range/
+  }
 ]
