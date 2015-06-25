@@ -221,4 +221,39 @@ module.exports = [
     failPos: 6
     failCause: /unexpected '\+'/
   }
+  # move
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[!1@4]'
+    new: {beff: ['a', 'c', 'd', 'e', 'b', 'f', 'g']}
+  }
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[!1~2@4]'
+    new: {beff: ['a', 'd', 'e', 'f', 'b', 'c', 'g']}
+  }
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[!1~2@4|1@0]'
+    new: {beff: ['d', 'a', 'e', 'f', 'b', 'c', 'g']}
+  }
+  # move fail
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[!1]'
+    failPos: 7
+    failCause: /ill-formed move/
+  }
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[!1@]'
+    failPos: 7
+    failCause: /ill-formed move/
+  }
+  {
+    old: {beff: {foo: 'FOO', bar: 'BAR'}}
+    str: '|beff[!1@4]'
+    failPos: 6
+    failCause: /unexpected '!'/
+  }
 ]

@@ -39,6 +39,7 @@ class WsonDiff
 
 reIndex = /^\d+$/
 reRange = /^(\d+)(~(\d+))?$/
+reMove = /^(\d+)(~(\d+))?@(\d+)$/
 
 SCALAR = 1
 OBJECT = 2
@@ -137,6 +138,20 @@ class Target
     @value.splice.apply @value, [@insertKey, 0].concat @insertValues
     return
 
+  moveKey: (key) ->
+    debug 'moveKey @value=%o, value=%o', @value, key
+    m = reMove.exec key
+    if not m?
+      throw new PrePatchError "ill-formed move '#{key}'"
+    srcKey = Number m[1]
+    len = if m[3]? then Number m[3] else 1
+    dstKey = Number m[4]
+    chunk = @value.splice srcKey, len
+    debug 'moveKey srcKey=%o, dstKey=%o, len=%o, @value=%o, chunk=%o', srcKey, dstKey, len, @value, chunk
+    @value.splice.apply @value, [dstKey, 0].concat chunk
+    debug 'moveKey @value=%o, arguments=%o', @value, [@dstKey, 0].concat chunk
+    return
+
 
 class State
 
@@ -172,6 +187,10 @@ class State
         if @target.getType() != ARRAY
           throw new PrePatchError()
         @stage = stages.insertBegin
+      when '!'
+        if @target.getType() != ARRAY
+          throw new PrePatchError()
+        @stage = stages.moveBegin
       else
         throw new PrePatchError()
     @rawNext = true
@@ -287,10 +306,6 @@ stages =
       @target.startInsert value
       @stage = stages.insertHasKey
       @
-    '#': ->
-      @target.startInsert ''
-      @stage = stages.insertHasKey
-      @
   insertHasKey:
     ':': ->
       @stage = stages.insertHasColon
@@ -313,6 +328,23 @@ stages =
     ']': ->
       @target.commitInsert()
       @stage = stages.scopeHas
+      @
+  moveBegin:
+    value: (value) ->
+      @target.moveKey value
+      @stage = stages.moveHas
+      @
+  moveHas:
+    ']': ->
+      @stage = stages.scopeHas
+      @
+    '|': ->
+      @stage = stages.moveNext
+      @
+  moveNext:
+    value: (value) ->
+      @target.moveKey value
+      @stage = stages.moveHas
       @
 
 
