@@ -1,5 +1,6 @@
 'use strict'
 
+_ = require 'lodash'
 debug = require('debug') 'wson-diff:patch'
 wson = require 'wson'
 
@@ -36,21 +37,76 @@ class WsonDiff
     new Patcher @
 
 
+reIndex = /^\d+$/    
+
+SCALAR = 1
+OBJECT = 2
+ARRAY  = 3
+
+
+class Target
+
+  constructor: (up, key) ->
+    @up = up
+    @key = key
+    if up?
+      @value = up[key]
+    @_type = null
+    debug 'Target %o', @
+
+  reset: (source) ->
+    @up = source.up
+    @key = source.key
+    @value = source.value
+    @_type = source._type
+
+  getType: ->
+    type = @_type
+    if not type?
+      value = @value
+      @_type = type = if _.isArray value
+        ARRAY
+      else if _.isObject value
+        OBJECT
+      else
+        SCALAR
+    type    
+
+  enterPath: (key) ->
+    type = @getType()
+    debug 'enterPath value=%o type=%o, key=%o', @value, type, key
+    if type == SCALAR
+      throw new PrePatchError "can't index scalar #{@value}"
+    if type == ARRAY
+      if not reIndex.test key
+        throw new PrePatchError "non-numeric index #{key} for array #{@value}"
+      key = Number key
+    @up = @up[@key]
+    @value = @up[key]
+    @key = key  
+    @_type = null
+    return
+
+  setValue: (value) ->
+    debug 'setValue @up=%o, @key=%o value=%o', @up, @key, value
+    @up[@key] = @value = value
+    @type = null
+    debug 'setValue ok'
+    return
+
+
 class State
 
-  constructor: (@str, @baseUp, @baseKey, @stage, @parent) ->
+  constructor: (@str, @baseTarget, @stage, @parent) ->
+    @target = new Target()
     @resetPath()
+    debug 'State %o', @ 
 
   resetPath: ->
-    @up  = @baseUp
-    @key = @baseKey
-
-  enterPath: (key) ->  
-    @up = @up[@key]
-    @key = key  
+    @target.reset @baseTarget
 
   push: (stage, rawNext) ->
-    state = new State @str, @up, @key, stage, @
+    state = new State @str, @target, stage, @
     state.rawNext = rawNext
     state
 
@@ -58,12 +114,6 @@ class State
     if not @parent?
       throw new PrePatchError()
     @parent
-
-  setValue: (value) ->
-    debug 'setValue @up=%o, @key=%o value=%o', @up, @key, value
-    @up[@key] = value
-    debug 'setValue ok'
-    return
 
   startScope: ->
     @stage = stages.scopeHas
@@ -84,7 +134,11 @@ class State
 stages = 
   pathBegin: 
     value: (value) ->
-      @enterPath value
+      @target.enterPath value
+      @stage = stages.pathHas
+      @
+    '#': (value) ->
+      @target.enterPath ''
       @stage = stages.pathHas
       @
     '|': ->
@@ -101,7 +155,11 @@ stages =
       @pop()
   pathNext: 
     value: (value) ->
-      @enterPath value
+      @target.enterPath value
+      @stage = stages.pathHas
+      @
+    '#': (value) ->
+      @target.enterPath ''
       @stage = stages.pathHas
       @
     '{': ->
@@ -121,7 +179,7 @@ stages =
       @startModify()
   scopeAssign: 
     value: (value) ->
-      @setValue value
+      @target.setValue value
       @stage = stages.scopeHas
       @
   scopeHas: 
@@ -159,9 +217,8 @@ class Patcher
       if str[0] != '|'
         return @wsonDiff.WSON.parse str
 
-      up = _: target 
-
-      state = new State str, up, '_', stages.pathNext
+      target = new Target _: target, '_'
+      state = new State str, target, stages.pathNext
       state.pos = 1
      
       @wsonDiff.WSON.parsePartial str, [true, 1], (isValue, value, nextPos) ->
@@ -194,7 +251,7 @@ class Patcher
         throw new PatchError str
       handler.call state
 
-      return up._
+      return target.up._
 
     catch error
       if error instanceof PrePatchError
@@ -202,7 +259,8 @@ class Patcher
       else if error instanceof wson.ParseError
         throw new PatchError error.s, error.pos, error.cause
       else
-        throw new PatchError str, state.pos, error
+        throw error
+        # throw new PatchError str, state.pos, error
 
 
 factory = (options) ->

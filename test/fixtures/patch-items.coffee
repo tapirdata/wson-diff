@@ -27,26 +27,47 @@ module.exports = [
     str: '|foo:FU|baz:BAZ'
     new: {foo: 'FU', bar: 'BAR', baz: 'BAZ'}
   }
+  {
+    old: {foo: 'FOO', bar: 'BAR'}
+    str: '|#:BAZ'
+    new: {foo: 'FOO', bar: 'BAR', '': 'BAZ'}
+  }
   # basic fail
   {
     old: {}
     str: ''
     failPos: 0
+    failCause: /unexpected end/
   }
   {
     old: {}
     str: '|foo:FU|'
     failPos: 8
+    failCause: /unexpected end/
+  }
+  {
+    old: {}
+    str: '|foo#:FU|'
+    failPos: 4
+    failCause: /unexpected '#'/
+  }
+  {
+    old: {}
+    str: '|#foo:FU|'
+    failPos: 2
+    failCause: /unexpected 'f'/
   }
   {
     old: {}
     str: '|foo|bar|baz:FU'
-    failPos: 9
+    failPos: 5
+    failCause: /can't index scalar/
   }
   {
     old: {foo: {}}
     str: '|foo|bar|baz:FU'
-    failPos: 13
+    failPos: 9
+    failCause: /can't index scalar/
   }
   # multi path
   {
@@ -70,10 +91,40 @@ module.exports = [
     old: {beff: {foo: 'FOO', bar: 'BAR'}}
     str: '|beff{foo:FU|baz:BAZ'
     failPos: 20
+    failCause: /unexpected end/
   }
   {
     old: {beff: {foo: 'FOO', bar: 'BAR'}}
     str: '|beff{foo:FU|baz:BAZ}}'
     failPos: 21
+    failCause: /unexpected '}'/
+  }
+  # array set
+  {
+    old: ['a', 'b', 'c']
+    str: '|1:B'
+    new: ['a', 'B', 'c']
+  }
+  {
+    old: ['a', ['b'], 'c']
+    str: '|1|0:B'
+    new: ['a', ['B'], 'c']
+  }
+  {
+    old: ['a', x: 'b', 'c']
+    str: '|1|x:B'
+    new: ['a', x: 'B', 'c']
+  }
+  {
+    old: foo: ['a', x: 'b', 'c']
+    str: '|foo|1|x:B'
+    new: foo: ['a', x: 'B', 'c']
+  }
+  # array set fail
+  {
+    old: ['a', 'b', 'c']
+    str: '|a:B'
+    failPos: 1
+    failCause: /non-numeric index/
   }
 ]
