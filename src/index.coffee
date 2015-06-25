@@ -5,6 +5,7 @@ debug = require('debug') 'wson-diff:patch'
 wson = require 'wson'
 
 patch = require './patch'
+diff = require './diff'
 
 class WsonDiff
 
@@ -13,6 +14,9 @@ class WsonDiff
 
   createPatcher: ->
     new patch.Patcher @
+
+  createDiffer: ->
+    new diff.Differ @
 
 
 factory = (options) ->
