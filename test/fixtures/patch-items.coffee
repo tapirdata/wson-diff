@@ -24,6 +24,11 @@ module.exports = [
   }
   {
     old: {foo: 'FOO', bar: 'BAR'}
+    str: '|foo:[FU|BA]'
+    new: {foo: ['FU', 'BA'], bar: 'BAR'}
+  }
+  {
+    old: {foo: 'FOO', bar: 'BAR'}
     str: '|foo:FU|baz:BAZ'
     new: {foo: 'FU', bar: 'BAR', baz: 'BAZ'}
   }
@@ -169,5 +174,51 @@ module.exports = [
     str: '|beff[-a]'
     failPos: 7
     failCause: /ill-formed range/
+  }
+  # insert
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[+1:X]'
+    new: {beff: ['a', 'X', 'b', 'c', 'd', 'e', 'f', 'g']}
+  }
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[+7:X]'
+    new: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'X']}
+  }
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[+1:X:[Y|Z]]'
+    new: {beff: ['a', 'X', ['Y', 'Z'], 'b', 'c', 'd', 'e', 'f', 'g']}
+  }
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[+1:X:[Y|Z]|0:A]'
+    new: {beff: ['A', 'a', 'X', ['Y', 'Z'], 'b', 'c', 'd', 'e', 'f', 'g']}
+  }
+  # insert fail
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[+1]'
+    failPos: 8
+    failCause: /unexpected ']'/
+  }
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[+:1]'
+    failPos: 7
+    failCause: /unexpected ':'/
+  }
+  {
+    old: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
+    str: '|beff[+a:X]'
+    failPos: 7
+    failCause: /non-numeric index/
+  }
+  {
+    old: {beff: {foo: 'FOO', bar: 'BAR'}}
+    str: '|beff[+1:X]'
+    failPos: 6
+    failCause: /unexpected '\+'/
   }
 ]

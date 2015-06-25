@@ -91,11 +91,18 @@ class Target
     @_type = null
     return
 
-  setValue: (value) ->
-    debug 'setValue @up=%o, @key=%o value=%o', @up, @key, value
+  assignValue: (value) ->
+    debug 'assignValue @up=%o, @key=%o value=%o', @up, @key, value
     @up[@key] = @value = value
     @type = null
-    debug 'setValue ok'
+    debug 'assignValue ok'
+    return
+
+  assignValueNext: (value) ->
+    debug 'assignValueNext @up=%o, @key=%o value=%o', @up, @key, value
+    @up[++@key] = @value = value
+    @type = null
+    debug 'assignValueNext ok'
     return
 
   deleteKey: (key) ->
@@ -114,6 +121,22 @@ class Target
       else
         throw new PrePatchError "can't delete from scalar #{@value}"
     return
+
+  startInsert: (key) ->
+    if not reIndex.test key
+      throw new PrePatchError "non-numeric index #{key} for array #{@value}"
+    @insertKey = key
+    @insertValues = []
+    return
+
+  addInsert: (value) ->
+    @insertValues.push value
+
+  commitInsert: ->
+    debug 'commitInsert value=%o, insertKey=%o, insertValues=%o', @value, @insertKey, @insertValues
+    @value.splice.apply @value, [@insertKey, 0].concat @insertValues
+    return
+
 
 class State
 
@@ -145,11 +168,16 @@ class State
     switch c
       when '-'
         @stage = stages.deleteBegin
+      when '+'
+        if @target.getType() != ARRAY
+          throw new PrePatchError()
+        @stage = stages.insertBegin
       else
         throw new PrePatchError()
     @rawNext = true
     @skipNext = 1
     @
+
 
 stages =
   pathBegin:
@@ -165,6 +193,7 @@ stages =
       @stage = stages.pathNext
       @
     ':': ->
+      @rawNext = false
       @stage = stages.scopeAssign
       @
     '{': ->
@@ -191,6 +220,7 @@ stages =
       @stage = stages.pathNext
       @
     ':': ->
+      @rawNext = false
       @stage = stages.scopeAssign
       @
     '{': ->
@@ -199,10 +229,21 @@ stages =
       @startModify()
   scopeAssign:
     value: (value) ->
-      @target.setValue value
+      @target.assignValue value
+      @stage = stages.scopeHas
+      @
+  scopeAssignNext:
+    value: (value) ->
+      @target.assignValueNext value
       @stage = stages.scopeHas
       @
   scopeHas:
+    ':': ->
+      if not _.isArray @target.up
+        throw new PrePatchError()
+      @rawNext = false
+      @stage = stages.scopeAssignNext
+      @
     '|': ->
       @resetPath()
       @stage = stages.pathBegin
@@ -225,8 +266,12 @@ stages =
       @target.deleteKey ''
       @stage = stages.deleteHas
       @
+  deleteHas:
     ']': ->
       @stage = stages.scopeHas
+      @
+    '|': ->
+      @stage = stages.deleteNext
       @
   deleteNext:
     value: (value) ->
@@ -237,12 +282,37 @@ stages =
       @target.deleteKey ''
       @stage = stages.deleteHas
       @
-  deleteHas:
-    ']': ->
-      @stage = stages.scopeHas
+  insertBegin:
+    value: (value) ->
+      @target.startInsert value
+      @stage = stages.insertHasKey
+      @
+    '#': ->
+      @target.startInsert ''
+      @stage = stages.insertHasKey
+      @
+  insertHasKey:
+    ':': ->
+      @stage = stages.insertHasColon
+      @rawNext = false
+      @
+  insertHasColon:
+    value: (value) ->
+      @target.addInsert value
+      @stage = stages.insertHasValue
+      @
+  insertHasValue:
+    ':': ->
+      @stage = stages.insertHasColon
+      @rawNext = false
       @
     '|': ->
-      @stage = stages.deleteNext
+      @target.commitInsert()
+      @stage = stages.insertBegin
+      @
+    ']': ->
+      @target.commitInsert()
+      @stage = stages.scopeHas
       @
 
 
