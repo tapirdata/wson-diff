@@ -8,6 +8,7 @@ class PrePatchError extends errors.WsonDiffError
   name: 'PrePatchError'
   constructor: (@cause) ->
 
+
 class PatchError extends errors.WsonDiffError
   name: 'PatchError'
   constructor: (@s, @pos, @cause) ->
@@ -20,7 +21,7 @@ class PatchError extends errors.WsonDiffError
       else
         char = "'#{@s[@pos]}'"
       @cause = "unexpected #{char}"
-
+    @message = "#{@cause} at '#{@s.slice 0, @pos}^#{@s.slice @pos}'"
 
 
 reIndex = /^\d+$/
@@ -193,9 +194,6 @@ stages =
       @target.enterPath ''
       @stage = stages.pathHas
       @
-    '|': ->
-      @stage = stages.pathNext
-      @
     ':': ->
       @rawNext = false
       @stage = stages.scopeAssign
@@ -215,10 +213,6 @@ stages =
       @target.enterPath ''
       @stage = stages.pathHas
       @
-    '{': ->
-      @startScope()
-    '[': ->
-      @startModify()
   pathHas:
     '|': ->
       @stage = stages.pathNext
@@ -242,6 +236,14 @@ stages =
       @stage = stages.scopeHas
       @
   scopeHas:
+    value: (value) ->
+      @target.enterPath value
+      @stage = stages.pathHas
+      @
+    '#': (value) ->
+      @target.enterPath ''
+      @stage = stages.pathHas
+      @
     ':': ->
       if not _.isArray @target.up
         throw new PrePatchError()
@@ -254,8 +256,8 @@ stages =
       @
     '{': ->
       @startScope()
-    '[': (value, prevPos, nextPos) ->
-      @startModify nextPos
+    '[': ->
+      @startModify
     '}': ->
       @pop()
     end: ->
@@ -349,7 +351,7 @@ class Patcher
         return @wsonDiff.WSON.parse str
 
       target = new Target _: target, '_'
-      state = new State str, target, stages.pathNext
+      state = new State str, target, stages.pathBegin
       state.pos = 1
 
       @wsonDiff.WSON.parsePartial str, [true, 1], (isValue, value, nextPos) ->

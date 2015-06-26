@@ -27,16 +27,16 @@ saveRepr = (x) ->
 
 for setup in require './fixtures/setups'
   describe setup.name, ->
-    diff = wsonDiff setup.options
-    patcher = diff.createPatcher()
+    wDiff = wsonDiff setup.options
     describe 'patch', ->
       for item in items
         do (item) ->
-          target = _.cloneDeep item.old
+          patcher = wDiff.createPatcher()
+          source = _.cloneDeep item.source
           if item.failPos?
-            it "should fail to patch #{saveRepr target} with '#{item.str}' @#{item.failPos}.", ->
+            it "should fail to patch #{saveRepr source} with '#{item.delta}' @#{item.failPos}.", ->
               try
-                patcher.patch target, item.str
+                patcher.patch source, item.delta
               catch e_
                 e = e_
               expect(e).to.be.instanceof wsonDiff.PatchError
@@ -44,7 +44,7 @@ for setup in require './fixtures/setups'
               if item.failCause
                 expect(e.cause).to.match item.failCause
           else
-            it "should patch #{saveRepr target} with '#{item.str}' to #{saveRepr item.new}.", ->
-              expect(patcher.patch target, item.str).to.be.deep.equal item.new
+            it "should patch #{saveRepr source} with '#{item.delta}' to #{saveRepr item.dest}.", ->
+              expect(patcher.patch source, item.delta).to.be.deep.equal item.dest
 
 

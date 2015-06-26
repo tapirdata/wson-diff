@@ -4,75 +4,78 @@ debug = require('debug') 'wson-diff:diff'
 errors = require './errors'
 
 
-class Delta
-
-
-class PlainDelta extends Delta
-
-   constructor: (@state, @dst) ->
-
-   getStr: (forRoot) ->
-     WSON = @state.wsonDiff.WSON
-     WSON.stringify @dst
-
-
-class ObjectDelta extends Delta
-
-   constructor: (@state, @deltaCount, @keyDeltas, @delKeys) ->
-
-   getStr: (forRoot) ->
-     WSON = @state.wsonDiff.WSON
-     str = ''
-     if @deltaCount > 0
-       deltaStrs = []
-       for key, delta of @keyDeltas
-         deltaStrs.push WSON.stringify(key) + ':' + delta.getStr()
-       str += '{' + deltaStrs.join('|') + '}'  
-     if @delKeys.length > 0
-       delStrs = []
-       for key in @delKeys
-         delStrs.push WSON.stringify key
-       str += '[-' + delStrs.join('|') + ']'  
-     str  
-
-
 class State
   
   constructor: (@wsonDiff) ->
 
-  getObjectDelta: (src, dst) ->
-    deltaCount = 0
-    keyDeltas = {}
-    for key, dstVal of dst
-      delta = @getDelta src[key], dstVal
-      if delta?
-        ++deltaCount
-        keyDeltas[key] = delta
-    delKeys = []
-    for key of src
+  getPlainDelta: (src, dst, isRoot) ->
+    WSON = @wsonDiff.WSON
+    delta = WSON.stringify dst
+    if not isRoot
+      delta = ':' + delta
+    delta  
+
+  getObjectDelta: (src, dst, isRoot) ->
+    WSON = @wsonDiff.WSON
+    delta = ''
+    debug 'getObjectDelta(src=%o, dst=%o, isRoot=%o)', src, dst, isRoot
+
+    delDelta = ''
+    delCount = 0
+    srcKeys = _(src).keys().sort().value()
+    for key in srcKeys
       if not _.has dst, key
-        delKeys.push key
-    if deltaCount > 0 or delKeys.length > 0
-      return new ObjectDelta @, deltaCount, keyDeltas, delKeys
+        if delCount > 0
+          delDelta += '|'
+        delDelta += WSON.stringify key
+        ++delCount
+    if delCount > 0
+      delta += '[-' + delDelta + ']'
+
+    subDelta = ''
+    subCount = 0
+    dstKeys = _(dst).keys().sort().value()
+    for key in dstKeys
+      keyDelta = @getDelta src[key], dst[key]
+      debug 'getObjectDelta: key=%o, keyDelta=%o', key, keyDelta
+      if keyDelta?
+        if subCount > 0
+          subDelta += '|'
+        subDelta += WSON.stringify(key) + keyDelta
+        ++subCount
+    debug 'getObjectDelta: subDelta=%o, subCount=%o', subDelta, subCount
+    if subCount > 0
+      if not isRoot
+        if subCount > 1
+          subDelta = '{' + subDelta + '}'
+        else if delCount == 0  
+          subDelta = '|' + subDelta
+      delta += subDelta    
+    if delta.length
+      if isRoot
+        delta = '|' + delta
+      return delta
+    null
+
+  getArrayDelta: (src, dst, isRoot) ->
+    return @getPlainDelta src, dst, isRoot
 
 
-  getArrayDelta: (src, dst) ->
-    return new PlainDelta @, dst
-
-  getDelta: (src, dst) ->
+  getDelta: (src, dst, isRoot) ->
     if _.isArray src
       if _.isArray dst
-        return @getArrayDelta src, dst
+        return @getArrayDelta src, dst, isRoot
       else
-        return new PlainDelta @, dst
+        return @getPlainDelta src, dst, isRoot
     else if _.isObject src
-      if _.isArray dst
-        return new PlainDelta @, dst
-      else if _.isObject dst
-        return @getObjectDelta src, dst
+      if not _.isArray(dst) and _.isObject(dst)
+        return @getObjectDelta src, dst, isRoot
+      else
+        return @getPlainDelta src, dst, isRoot
     else #scalar src
       if src != dst
-        return new PlainDelta @, dst
+        return @getPlainDelta src, dst, isRoot
+    null  
 
 
 class Differ
@@ -81,9 +84,7 @@ class Differ
 
   diff: (src, dst) ->
     state = new State @wsonDiff
-    delta = state.getDelta src, dst
-    if delta?
-      delta.getStr true
+    state.getDelta src, dst, true
 
 
 exports.Differ = Differ
