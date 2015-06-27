@@ -1,8 +1,49 @@
 _ = require 'lodash'
 debug = require('debug') 'wson-diff:diff'
+mdiff = require 'mdiff'
 
 errors = require './errors'
+Idxer = require './idxer'
 
+class Move
+  constructor: (@srcIdx, @dstIdx) ->
+
+
+class DiffChunk
+
+  constructor: (@srcB, @srcE, @dstB, @dstE) ->
+    @srcMoves = []
+    @dstMoves = []
+
+  putSrcMove: (move) ->
+    @srcMoves.push move
+
+  putDstMove: (move) ->
+    @dstMoves.push move
+
+  withDeletes: (cb) ->
+    delLenSum = 0
+    delB = @srcB
+    for srcMove in @srcMoves
+      delE = srcMove.srcIdx
+      delLen = delE - delB
+      if delLen > 0
+        cb delB - delLenSum, delLen
+        delLenSum += delLen
+      delB = delE + 1
+    delE = @srcE
+    delLen = delE - delB
+    if delLen > 0
+      cb delB - delLenSum, delLen
+      delLenSum += delLen
+    @delLenSum = delLenSum  
+
+  withMoves: (cb) ->
+    for srcMove in @srcMoves
+      dstIdx = srcMove.dstIdx
+      srcIdx = srcMove.srcIdx
+      if dstIdx > srcIdx
+        cb @srcB, dstIdx - 1
 
 class State
   
@@ -58,6 +99,67 @@ class State
     null
 
   getArrayDelta: (src, dst, isRoot) ->
+    allString = true
+    srcIdxer = new Idxer @wsonDiff, src
+    dstIdxer = new Idxer @wsonDiff, dst, srcIdxer.allString
+    if srcIdxer.allString and not dstIdxer.allString
+      srcIdxer = new Idxer @wsonDiff, src, false
+    debug 'getArrayDelta: src keys=%o allString=%o', srcIdxer.keys, srcIdxer.allString
+    debug 'getArrayDelta: dst keys=%o allString=%o', dstIdxer.keys, dstIdxer.allString
+    chunks = []
+    dstKeyUses = {}
+    d = mdiff(src, dst).scanDiff (srcB, srcE, dstB, dstE) ->
+      debug 'getArrayDelta: %o..%o %o..%o', srcB, srcE, dstB, dstE
+      chunk = new DiffChunk srcB, srcE, dstB, dstE
+      chunks.push chunk
+      dstIdx = dstB
+      while dstIdx < dstE
+        dstKey = dstIdxer.keys[dstIdx]
+        keyUse = dstKeyUses[dstKey]
+        useCi = [chunk, dstIdx]
+        if keyUse?
+          keyUse.push useCi
+        else
+          dstKeyUses[dstKey] = [useCi]
+        ++dstIdx
+    debug 'getArrayDelta: dstKeyUses=%o', dstKeyUses
+    for srcChunk in chunks
+      srcIdx = srcChunk.srcB
+      while srcIdx < srcChunk.srcE
+        srcKey = srcIdxer.keys[srcIdx]
+        dstKeyUse = dstKeyUses[srcKey]
+        if dstKeyUse and dstKeyUse.length > 0
+          [dstChunk, dstIdx] = dstKeyUse.pop()
+          debug 'getArrayDelta: move %o->%o', srcIdx, dstIdx
+          move = new Move srcIdx, dstIdx
+          srcChunk.putSrcMove move
+          dstChunk.putDstMove move
+        ++srcIdx
+
+    delta = ''
+
+    deleteCount = 0
+    delLenSum = 0
+    for chunk in chunks
+      debug 'getArrayDelta: chunk=%o', chunk
+      chunkDelLenSum = 0
+      chunk.withDeletes (delIdx, delLen) ->
+        debug 'getArrayDelta: delIdx=%o, delLen=%o', delIdx, delLen
+        if deleteCount == 0
+          delta += '[-'
+        else 
+          delta += '|'
+        delta += delIdx - delLenSum
+        if delLen != 1  
+          delta += '~' + delLen
+        ++deleteCount  
+      delLenSum += chunk.delLenSum  
+    if deleteCount > 0
+      delta += ']'
+
+    if isRoot
+      delta = '|' + delta
+    return delta
     return @getPlainDelta src, dst, isRoot
 
 

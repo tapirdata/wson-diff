@@ -26,7 +26,7 @@
   "dependencies": {
     "debug": "^2.2.0",
     "lodash": "^3.9.3",
-    "mdiff": "^0.2.3",
-    "wson": "^1.1.1"
+    "mdiff": "^0.3.0",
+    "wson": "^1.3.1"
   }
 }
