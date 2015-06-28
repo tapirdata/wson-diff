@@ -135,7 +135,7 @@ class Target
     chunk = @value.splice srcKey, len
     debug 'moveKey srcKey=%o, dstKey=%o, len=%o, @value=%o, chunk=%o', srcKey, dstKey, len, @value, chunk
     @value.splice.apply @value, [dstKey, 0].concat chunk
-    debug 'moveKey @value=%o, arguments=%o', @value, [@dstKey, 0].concat chunk
+    # debug 'moveKey @value=%o, arguments=%o', @value, [@dstKey, 0].concat chunk
     return
 
 
@@ -257,7 +257,7 @@ stages =
     '{': ->
       @startScope()
     '[': ->
-      @startModify
+      @startModify()
     '}': ->
       @pop()
     end: ->
