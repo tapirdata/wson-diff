@@ -5,45 +5,100 @@ mdiff = require 'mdiff'
 errors = require './errors'
 Idxer = require './idxer'
 
-class Move
-  constructor: (@srcIdx, @dstIdx) ->
-
 
 class DiffChunk
 
   constructor: (@srcB, @srcE, @dstB, @dstE) ->
     @srcMoves = []
     @dstMoves = []
+    @shifts = []
+    @shiftSum = 0
 
   putSrcMove: (move) ->
     @srcMoves.push move
+    # @corrOfs move.srcOfs, 1
+    @shifts.push move.srcOfs
+    @shifts.push 1
 
-  putDstMove: (move) ->
-    @dstMoves.push move
+  putDstMove: (dstOfs) ->
+    # @corrOfs dstOfs, -1
+    @dstMoves.push dstOfs
+
+  corrOfs: (ofs, len) ->
+    debug 'corrOfs: ofs=%o len=%o @shiftSum=%o @shifts=%o', ofs, len, @shiftSum, @shifts
+    shifts = @shifts
+    i = shifts.length
+    shiftSum = @shiftSum
+    loop
+      if i <= 1
+        shifts.splice.call shifts, 0, 0, ofs, len
+        break
+      else  
+        shiftLen = shifts[--i]
+        shiftOfs = shifts[--i]
+        if shiftOfs < ofs
+          if len != 0
+            shifts.splice.call shifts, i + 2, 0, ofs, len
+          break
+        if shiftOfs == ofs
+          shifts[i+1] += len
+          if len > 0
+            shiftSum -= shiftLen
+          break
+        shiftSum -= shiftLen
+    @shiftSum += len
+    ofs += shiftSum
+    debug 'corrOfs: ofs=%o @shiftSum=%o @shifts=%o', ofs, @shiftSum, @shifts
+    ofs
 
   withDeletes: (cb) ->
-    delLenSum = 0
-    delB = @srcB
-    for srcMove in @srcMoves
-      delE = srcMove.srcIdx
+    srcLen = @srcE - @srcB
+    dstLen = @dstE - @dstB
+    delRest = srcLen - dstLen - @srcMoves.length + @dstMoves.length
+    debug 'withDeletes: delRest=%o', delRest
+    delE = srcLen
+    moves = @srcMoves
+    moveIdx = moves.length
+    while delRest > 0
+      if moveIdx > 0
+        move = moves[--moveIdx]
+        delB = move.srcOfs + 1
+      else
+        delB = 0
+      debug 'withDeletes: delB=%o, delE=%o', delB, delE
       delLen = delE - delB
-      if delLen > 0
-        cb delB - delLenSum, delLen
-        delLenSum += delLen
-      delB = delE + 1
-    delE = @srcE
-    delLen = delE - delB
-    if delLen > 0
-      cb delB - delLenSum, delLen
-      delLenSum += delLen
-    @delLenSum = delLenSum  
+      if delLen > delRest
+        delLen = delRest
+        delB = delE - delLen
+      cb @srcB + @corrOfs(delB, -delLen), delLen
+      delRest -= delLen
+      delE = delB - 1
+        
+  withMoves: (chunks, srcChunkIdx, srcShiftSum, cb) ->
+    for move in @srcMoves
+      dstChunkIdx = move.dstChunkIdx
+      dstShiftSum = srcShiftSum
+      if srcChunkIdx < dstChunkIdx
+        idx = srcChunkIdx
+        while idx < dstChunkIdx
+          dstShiftSum += chunks[idx++].shiftSum
+      else    
+        idx = dstChunkIdx
+        while idx < srcChunkIdx
+          dstShiftSum += chunks[idx++].shiftSum
+      dstChunk = chunks[dstChunkIdx]    
+      debug 'withMoves: srcChunkIdx=%o move=%o srcShiftSum=%o, dstShiftSum=%o', srcChunkIdx, move, srcShiftSum, dstShiftSum
+      debug 'withMoves: srcChunk=%o', @
+      debug 'withMoves: dstChunk=%o', dstChunk
+      srcOfs = @corrOfs(move.srcOfs, -1)
+      dstOfs = dstChunk.corrOfs(move.dstOfs, 1)
+      debug 'withMoves: srcOfs=%o dstOfs=%o', srcOfs, dstOfs
+      srcIdx = srcShiftSum + @srcB + srcOfs
+      dstIdx = dstShiftSum + dstChunk.srcB + dstOfs
+      if srcIdx < dstIdx
+        --dstIdx
+      cb srcIdx, dstIdx, 1
 
-  withMoves: (cb) ->
-    for srcMove in @srcMoves
-      dstIdx = srcMove.dstIdx
-      srcIdx = srcMove.srcIdx
-      if dstIdx > srcIdx
-        cb @srcB, dstIdx - 1
 
 class State
   
@@ -116,7 +171,7 @@ class State
       while dstIdx < dstE
         dstKey = dstIdxer.keys[dstIdx]
         keyUse = dstKeyUses[dstKey]
-        useCi = [chunk, dstIdx]
+        useCi = [chunks.length - 1, dstIdx]
         if keyUse?
           keyUse.push useCi
         else
@@ -129,32 +184,49 @@ class State
         srcKey = srcIdxer.keys[srcIdx]
         dstKeyUse = dstKeyUses[srcKey]
         if dstKeyUse and dstKeyUse.length > 0
-          [dstChunk, dstIdx] = dstKeyUse.pop()
-          debug 'getArrayDelta: move %o->%o', srcIdx, dstIdx
-          move = new Move srcIdx, dstIdx
-          srcChunk.putSrcMove move
-          dstChunk.putDstMove move
+          [dstChunkIdx, dstIdx] = dstKeyUse.pop()
+          debug 'getArrayDelta: move srcIdx=%o dstChunkIdx=%o dstIdx=%o', srcIdx, dstChunkIdx, dstIdx
+          dstChunk = chunks[dstChunkIdx]
+          srcOfs = srcIdx - srcChunk.srcB
+          dstOfs = dstIdx - dstChunk.dstB
+          srcChunk.putSrcMove srcOfs: srcOfs, dstChunkIdx: dstChunkIdx, dstOfs: dstOfs
+          dstChunk.putDstMove dstOfs
         ++srcIdx
 
     delta = ''
 
-    deleteCount = 0
-    delLenSum = 0
-    for chunk in chunks
+    delDeltaCount = 0
+    for chunk in chunks by -1
       debug 'getArrayDelta: chunk=%o', chunk
-      chunkDelLenSum = 0
       chunk.withDeletes (delIdx, delLen) ->
         debug 'getArrayDelta: delIdx=%o, delLen=%o', delIdx, delLen
-        if deleteCount == 0
+        if delDeltaCount == 0
           delta += '[-'
         else 
           delta += '|'
-        delta += delIdx - delLenSum
+        delta += delIdx
         if delLen != 1  
           delta += '~' + delLen
-        ++deleteCount  
-      delLenSum += chunk.delLenSum  
-    if deleteCount > 0
+        ++delDeltaCount  
+    if delDeltaCount > 0
+      delta += ']'
+
+    moveDeltaCount = 0
+    shiftSum = 0
+    for chunk, chunkIdx in chunks
+      chunk.withMoves chunks, chunkIdx, shiftSum, (srcIdx, dstIdx, moveLen) ->
+        debug 'getArrayDelta: srcIdx=%o, dstIdx=%o, moveLen=%o', srcIdx, dstIdx, moveLen
+        if moveDeltaCount == 0
+          delta += '[!'
+        else 
+          delta += '|'
+        delta += srcIdx
+        if moveLen != 1  
+          delta += '~' + moveLen
+        delta += '@' + dstIdx
+        ++moveDeltaCount  
+      shiftSum += chunk.shiftSum
+    if moveDeltaCount > 0
       delta += ']'
 
     if isRoot
@@ -190,3 +262,4 @@ class Differ
 
 
 exports.Differ = Differ
+exports.DiffChunk = DiffChunk
