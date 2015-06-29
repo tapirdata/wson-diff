@@ -32,11 +32,11 @@ for setup in require './fixtures/setups'
       for item in items
         do (item) ->
           patcher = wDiff.createPatcher()
-          source = _.cloneDeep item.source
+          have = _.cloneDeep item.have
           if item.failPos?
-            it "should fail to patch #{saveRepr source} with '#{item.delta}' @#{item.failPos}.", ->
+            it "should fail to patch #{saveRepr have} with '#{item.delta}' @#{item.failPos}.", ->
               try
-                patcher.patch source, item.delta
+                patcher.patch have, item.delta
               catch e_
                 e = e_
               expect(e).to.be.instanceof wsonDiff.PatchError
@@ -44,7 +44,7 @@ for setup in require './fixtures/setups'
               if item.failCause
                 expect(e.cause).to.match item.failCause
           else
-            it "should patch #{saveRepr source} with '#{item.delta}' to #{saveRepr item.dest}.", ->
-              expect(patcher.patch source, item.delta).to.be.deep.equal item.dest
+            it "should patch #{saveRepr have} with '#{item.delta}' to #{saveRepr item.wish}.", ->
+              expect(patcher.patch have, item.delta).to.be.deep.equal item.wish
 
 

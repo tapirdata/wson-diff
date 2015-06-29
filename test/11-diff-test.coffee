@@ -35,16 +35,20 @@ for setup in require './fixtures/setups'
         do (item) ->
           differ = wDiff.createDiffer()
           patcher = wDiff.createPatcher()
-          delta = differ.diff item.source, item.dest
-          debug 'diff: source=%o, dest=%o, delta=%o', item.source, item.dest, delta
+          delta = differ.diff item.have, item.wish
+          debug 'diff: have=%o, wish=%o, delta=%o', item.have, item.wish, delta
           if _.has item, 'delta'
-            it "should diff #{saveRepr item.source} to #{saveRepr item.dest} with #{saveRepr item.delta}.", ->
+            it "should diff #{saveRepr item.have} to #{saveRepr item.wish} with #{saveRepr item.delta}.", ->
               expect(delta).to.be.equal item.delta
-          if delta? and not item.noPatch
-            source = _.cloneDeep item.source
-            dest = patcher.patch source, delta
-            it "should patch #{saveRepr item.source} with '#{delta}' to #{saveRepr item.dest}.", ->
-              expect(dest).to.be.deep.equal item.dest
+          if delta? 
+            if not item.noPatch
+              have = _.cloneDeep item.have
+              got = patcher.patch have, delta
+              it "should patch #{saveRepr item.have} with '#{delta}' to #{saveRepr item.wish}.", ->
+                expect(got).to.be.deep.equal item.wish
+          else      
+            it "should get null delta for no change only", ->
+              expect(item.have).to.be.deep.equal item.wish
 
 
 

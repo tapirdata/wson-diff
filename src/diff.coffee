@@ -6,121 +6,270 @@ errors = require './errors'
 Idxer = require './idxer'
 
 
-class DiffChunk
+class Transposer
 
-  constructor: (@srcB, @srcE, @dstB, @dstE) ->
+  constructor: (@haveBegin, @haveLen, @wishBegin, @wishLen) ->
     @srcMoves = []
     @dstMoves = []
-    @shifts = []
-    @shiftSum = 0
+    @srcMoveSum = 0
+    @dstMoveSum = 0
+    @adjust = 0    # of inserts - # of deletes
 
   putSrcMove: (move) ->
     @srcMoves.push move
-    # @corrOfs move.srcOfs, 1
-    @shifts.push move.srcOfs
-    @shifts.push 1
+    @srcMoveSum += move.len
 
-  putDstMove: (dstOfs) ->
-    # @corrOfs dstOfs, -1
-    @dstMoves.push dstOfs
-
-  corrOfs: (ofs, len) ->
-    debug 'corrOfs: ofs=%o len=%o @shiftSum=%o @shifts=%o', ofs, len, @shiftSum, @shifts
-    shifts = @shifts
-    i = shifts.length
-    shiftSum = @shiftSum
-    loop
-      if i <= 1
-        shifts.splice.call shifts, 0, 0, ofs, len
+  putDstMove: (move) ->
+    dstMoves = @dstMoves
+    for dstMove, moveIdx in dstMoves
+      if dstMove.dstOfs > move.dstOfs
         break
-      else  
-        shiftLen = shifts[--i]
-        shiftOfs = shifts[--i]
-        if shiftOfs < ofs
-          if len != 0
-            shifts.splice.call shifts, i + 2, 0, ofs, len
-          break
-        if shiftOfs == ofs
-          shifts[i+1] += len
-          if len > 0
-            shiftSum -= shiftLen
-          break
-        shiftSum -= shiftLen
-    @shiftSum += len
-    ofs += shiftSum
-    debug 'corrOfs: ofs=%o @shiftSum=%o @shifts=%o', ofs, @shiftSum, @shifts
-    ofs
+    dstMoves.splice moveIdx, 0, move 
+    @dstMoveSum += move.len
 
-  withDeletes: (cb) ->
-    srcLen = @srcE - @srcB
-    dstLen = @dstE - @dstB
-    delRest = srcLen - dstLen - @srcMoves.length + @dstMoves.length
-    debug 'withDeletes: delRest=%o', delRest
-    delE = srcLen
+  getDeletes: (cb) ->
+    delRest = @haveLen - @wishLen - @srcMoveSum + @dstMoveSum
+    debug 'getDeletes: delRest=%o', delRest
+    delEnd = @haveLen
     moves = @srcMoves
     moveIdx = moves.length
     while delRest > 0
-      if moveIdx > 0
-        move = moves[--moveIdx]
-        delB = move.srcOfs + 1
+      --moveIdx  
+      if moveIdx >= 0
+        move = moves[moveIdx]
+        delBegin = move.srcOfs + 1
       else
-        delB = 0
-      debug 'withDeletes: delB=%o, delE=%o', delB, delE
-      delLen = delE - delB
-      if delLen > delRest
-        delLen = delRest
-        delB = delE - delLen
-      cb @srcB + @corrOfs(delB, -delLen), delLen
-      delRest -= delLen
-      delE = delB - 1
-        
-  withMoves: (chunks, srcChunkIdx, srcShiftSum, cb) ->
+        delBegin = 0
+      debug 'getDeletes: %o..%o', delBegin, delEnd
+      delLen = delEnd - delBegin
+      if delLen > 0
+        if delLen > delRest
+          delLen = delRest
+          delBegin = delEnd - delLen
+        cb @haveBegin + delBegin, delLen
+        @srcMoves.splice moveIdx + 1, 0,
+          srcOfs: delBegin
+          len: delLen
+        delRest -= delLen
+      delEnd = delBegin - 1
+      @adjust -= delLen
+
+  putMove: (dstOfs, len) ->
+    debug 'putMove: %o', @
+    shift = 0
     for move in @srcMoves
-      dstChunkIdx = move.dstChunkIdx
-      dstShiftSum = srcShiftSum
-      if srcChunkIdx < dstChunkIdx
-        idx = srcChunkIdx
-        while idx < dstChunkIdx
-          dstShiftSum += chunks[idx++].shiftSum
-      else    
-        idx = dstChunkIdx
-        while idx < srcChunkIdx
-          dstShiftSum += chunks[idx++].shiftSum
-      dstChunk = chunks[dstChunkIdx]    
-      debug 'withMoves: srcChunkIdx=%o move=%o srcShiftSum=%o, dstShiftSum=%o', srcChunkIdx, move, srcShiftSum, dstShiftSum
-      debug 'withMoves: srcChunk=%o', @
-      debug 'withMoves: dstChunk=%o', dstChunk
-      srcOfs = @corrOfs(move.srcOfs, -1)
-      dstOfs = dstChunk.corrOfs(move.dstOfs, 1)
-      debug 'withMoves: srcOfs=%o dstOfs=%o', srcOfs, dstOfs
-      srcIdx = srcShiftSum + @srcB + srcOfs
-      dstIdx = dstShiftSum + dstChunk.srcB + dstOfs
-      if srcIdx < dstIdx
-        --dstIdx
-      cb srcIdx, dstIdx, 1
+      if move.srcOfs > dstOfs
+        break
+      shift += move.len
+    for move in @dstMoves
+      if move.dstOfs == dstOfs
+        move.len = 0
+        break
+      shift -= move.len
+    @adjust += len
+    debug 'putMove: dstOfs=%o len=%o, shift=%o', dstOfs, len, shift
+    dstOfs + shift
+
+  getMoves: (ad, srcTdx, srcOff, cb) ->
+    thisShift = 0
+    dstMoves = @dstMoves
+    dstMoveLen = dstMoves.length
+    dstMoveIdx = 0
+    for move in @srcMoves
+      while dstMoveIdx < dstMoveLen
+        dstMove = dstMoves[dstMoveIdx]
+        if dstMove.dstOfs >= move.srcOfs
+          break
+        thisShift += dstMove.len
+        ++dstMoveIdx
+      dstTdx = move.dstTdx
+      moveLen = move.len
+      debug 'getMoves: move=%o thisShift=%o', move, thisShift
+      if dstTdx?
+        dstOff = srcOff + ad.getOffDiff srcTdx, dstTdx
+        debug 'getMoves: srcOff=%o, dstOff=%o', srcOff, dstOff
+        dstTransposer = ad.transposers[move.dstTdx]
+        dstOfs = dstTransposer.putMove move.dstOfs, moveLen
+        srcIdx = @haveBegin + move.srcOfs + srcOff + thisShift
+        dstIdx = dstTransposer.haveBegin + dstOfs + dstOff
+        if dstIdx > srcIdx
+          dstIdx -= moveLen
+        else  
+          srcOff += moveLen
+        cb srcIdx, dstIdx, moveLen
+        move.len = 0
+        @adjust -= moveLen
+      thisShift -= moveLen
+    srcOff + @adjust  
+
+
+class ArrayDiff
+
+  constructor: (@wsonDiff, have, wish) ->
+    @have = have
+    @wish = wish
+    @setupIdxers()
+    @setupTransposers()
+    if @transposers.length > 0
+      @setupMoves()
+
+  setupIdxers: ->  
+    haveIdxer = new Idxer @wsonDiff, @have
+    wishIdxer = new Idxer @wsonDiff, @wish, haveIdxer.allString
+    if haveIdxer.allString and not wishIdxer.allString
+      haveIdxer = new Idxer @wsonDiff, @have, false
+    # debug 'setupIdxers: have keys=%o allString=%o', haveIdxer.keys, haveIdxer.allString
+    # debug 'setupIdxers: wish keys=%o allString=%o', wishIdxer.keys, wishIdxer.allString
+    @haveIdxer = haveIdxer
+    @wishIdxer = wishIdxer
+
+  setupTransposers: ->  
+    haveIdxer = @haveIdxer
+    wishIdxer = @wishIdxer
+
+    transposers = []
+    wishKeyUses = {}
+
+    d = mdiff(haveIdxer.keys, wishIdxer.keys).scanDiff (haveBegin, haveEnd, wishBegin, wishEnd) ->
+      debug 'setupTransposers: %o..%o %o..%o', haveBegin, haveEnd, wishBegin, wishEnd
+      haveLen = haveEnd - haveBegin
+      wishLen = wishEnd - wishBegin
+      transposer = new Transposer haveBegin, haveLen, wishBegin, wishLen
+      wishTdx = transposers.length
+      transposers.push transposer
+
+      wishOfs = 0
+      while wishOfs < wishLen
+        wishKey = wishIdxer.keys[wishBegin + wishOfs]
+        keyUse = wishKeyUses[wishKey]
+        useTo = [wishTdx, wishOfs]
+        if keyUse?
+          keyUse.push useTo
+        else
+          wishKeyUses[wishKey] = [useTo]
+        ++wishOfs
+    # debug 'setupTransposers: d=%o', d
+    # for transposer in transposers
+    #    debug '  %o', transposer
+    # debug '  wishKeyUses=%o', wishKeyUses
+    @transposers = transposers
+    @wishKeyUses = wishKeyUses
+
+  setupMoves: ->  
+    haveIdxer = @haveIdxer
+    wishKeyUses = @wishKeyUses
+    transposers = @transposers
+    for srcTransposer, srcTdx in transposers
+      srcBegin = srcTransposer.haveBegin
+      srcLen   = srcTransposer.haveLen
+      srcOfs = 0
+      while srcOfs < srcLen
+        key = haveIdxer.keys[srcBegin + srcOfs]
+        keyUse = wishKeyUses[key]
+        if keyUse and keyUse.length > 0
+          [dstTdx, dstOfs] = keyUse.pop()
+          # debug 'setupMoves: move srcOfs=%o dstTdx=%o dstOfs=%o', srcOfs, dstTdx, dstOfs
+          dstTransposer = transposers[dstTdx]
+          move =
+            srcTdx: srcTdx
+            srcOfs: srcOfs
+            dstTdx: dstTdx
+            dstOfs: dstOfs
+            len: 1
+          srcTransposer.putSrcMove move
+          dstTransposer.putDstMove move
+        ++srcOfs
+    # debug 'setupMoves:'
+    # for transposer in transposers
+    #    debug '  %o', transposer
+  
+  getOffDiff: (fromTdx, toTdx) ->
+    sum = 0
+    transposers = @transposers
+    if fromTdx < toTdx
+      idx = fromTdx
+      while idx < toTdx
+        sum += transposers[idx++].adjust
+    else    
+      idx = toTdx
+      while idx < fromTdx
+        sum -= transposers[idx++].adjust
+    sum    
+       
+  getDeleteDelta: ->
+    delta = ''
+    count = 0
+    for transposer in @transposers by -1
+      debug 'getDeleteDelta: transposer=%o', transposer
+      transposer.getDeletes (delIdx, delLen) ->
+        debug 'getDeleteDelta: delIdx=%o, delLen=%o', delIdx, delLen
+        delta += if count == 0 then '[-' else '|'
+        delta += delIdx
+        if delLen != 1  
+          delta += '~' + delLen
+        ++count  
+    if count > 0
+      delta += ']'
+
+    debug 'getDeleteDelta:'
+    for transposer in @transposers
+       debug '  %o', transposer
+    delta  
+
+  getMoveDelta: ->
+    delta = ''
+    count = 0
+    srcOff = 0
+    for transposer, srcTdx in @transposers
+      debug 'getMoveDelta: %o', transposer
+      srcOff = transposer.getMoves @, srcTdx, srcOff, (srcIdx, dstIdx, moveLen) ->
+        debug 'getMoveDelta: srcIdx=%o, dstIdx=%o, moveLen=%o', srcIdx, dstIdx, moveLen
+        delta += if count == 0 then '[!' else '|'
+        delta += srcIdx
+        if moveLen != 1  
+          delta += '~' + moveLen
+        delta += '@' + dstIdx
+        ++count  
+    if count > 0
+      delta += ']'
+
+    debug 'getMoveDelta:'
+    for transposer in @transposers
+       debug '  %o', transposer
+    delta  
+
+  getDelta: ->
+    if @transposers.length == 0
+      null
+    else  
+      delta = ''
+      delta += @getDeleteDelta()
+      # @getMoveDelta()
+      delta += @getMoveDelta()
+      delta
 
 
 class State
   
   constructor: (@wsonDiff) ->
 
-  getPlainDelta: (src, dst, isRoot) ->
+  getPlainDelta: (have, wish, isRoot) ->
     WSON = @wsonDiff.WSON
-    delta = WSON.stringify dst
+    delta = WSON.stringify wish
     if not isRoot
       delta = ':' + delta
     delta  
 
-  getObjectDelta: (src, dst, isRoot) ->
+  getObjectDelta: (have, wish, isRoot) ->
     WSON = @wsonDiff.WSON
     delta = ''
-    debug 'getObjectDelta(src=%o, dst=%o, isRoot=%o)', src, dst, isRoot
+    debug 'getObjectDelta(have=%o, wish=%o, isRoot=%o)', have, wish, isRoot
 
     delDelta = ''
     delCount = 0
-    srcKeys = _(src).keys().sort().value()
-    for key in srcKeys
-      if not _.has dst, key
+    haveKeys = _(have).keys().sort().value()
+    for key in haveKeys
+      if not _.has wish, key
         if delCount > 0
           delDelta += '|'
         delDelta += WSON.stringify key
@@ -130,9 +279,9 @@ class State
 
     subDelta = ''
     subCount = 0
-    dstKeys = _(dst).keys().sort().value()
-    for key in dstKeys
-      keyDelta = @getDelta src[key], dst[key]
+    wishKeys = _(wish).keys().sort().value()
+    for key in wishKeys
+      keyDelta = @getDelta have[key], wish[key]
       debug 'getObjectDelta: key=%o, keyDelta=%o', key, keyDelta
       if keyDelta?
         if subCount > 0
@@ -153,102 +302,29 @@ class State
       return delta
     null
 
-  getArrayDelta: (src, dst, isRoot) ->
-    allString = true
-    srcIdxer = new Idxer @wsonDiff, src
-    dstIdxer = new Idxer @wsonDiff, dst, srcIdxer.allString
-    if srcIdxer.allString and not dstIdxer.allString
-      srcIdxer = new Idxer @wsonDiff, src, false
-    debug 'getArrayDelta: src keys=%o allString=%o', srcIdxer.keys, srcIdxer.allString
-    debug 'getArrayDelta: dst keys=%o allString=%o', dstIdxer.keys, dstIdxer.allString
-    chunks = []
-    dstKeyUses = {}
-    d = mdiff(src, dst).scanDiff (srcB, srcE, dstB, dstE) ->
-      debug 'getArrayDelta: %o..%o %o..%o', srcB, srcE, dstB, dstE
-      chunk = new DiffChunk srcB, srcE, dstB, dstE
-      chunks.push chunk
-      dstIdx = dstB
-      while dstIdx < dstE
-        dstKey = dstIdxer.keys[dstIdx]
-        keyUse = dstKeyUses[dstKey]
-        useCi = [chunks.length - 1, dstIdx]
-        if keyUse?
-          keyUse.push useCi
-        else
-          dstKeyUses[dstKey] = [useCi]
-        ++dstIdx
-    debug 'getArrayDelta: dstKeyUses=%o', dstKeyUses
-    for srcChunk in chunks
-      srcIdx = srcChunk.srcB
-      while srcIdx < srcChunk.srcE
-        srcKey = srcIdxer.keys[srcIdx]
-        dstKeyUse = dstKeyUses[srcKey]
-        if dstKeyUse and dstKeyUse.length > 0
-          [dstChunkIdx, dstIdx] = dstKeyUse.pop()
-          debug 'getArrayDelta: move srcIdx=%o dstChunkIdx=%o dstIdx=%o', srcIdx, dstChunkIdx, dstIdx
-          dstChunk = chunks[dstChunkIdx]
-          srcOfs = srcIdx - srcChunk.srcB
-          dstOfs = dstIdx - dstChunk.dstB
-          srcChunk.putSrcMove srcOfs: srcOfs, dstChunkIdx: dstChunkIdx, dstOfs: dstOfs
-          dstChunk.putDstMove dstOfs
-        ++srcIdx
+  getArrayDelta: (have, wish, isRoot) ->
+    ad = new ArrayDiff @wsonDiff, have, wish
+    delta = ad.getDelta()
+    if delta?
+      if isRoot
+        delta = '|' + delta
+    delta
+    
 
-    delta = ''
-
-    delDeltaCount = 0
-    for chunk in chunks by -1
-      debug 'getArrayDelta: chunk=%o', chunk
-      chunk.withDeletes (delIdx, delLen) ->
-        debug 'getArrayDelta: delIdx=%o, delLen=%o', delIdx, delLen
-        if delDeltaCount == 0
-          delta += '[-'
-        else 
-          delta += '|'
-        delta += delIdx
-        if delLen != 1  
-          delta += '~' + delLen
-        ++delDeltaCount  
-    if delDeltaCount > 0
-      delta += ']'
-
-    moveDeltaCount = 0
-    shiftSum = 0
-    for chunk, chunkIdx in chunks
-      chunk.withMoves chunks, chunkIdx, shiftSum, (srcIdx, dstIdx, moveLen) ->
-        debug 'getArrayDelta: srcIdx=%o, dstIdx=%o, moveLen=%o', srcIdx, dstIdx, moveLen
-        if moveDeltaCount == 0
-          delta += '[!'
-        else 
-          delta += '|'
-        delta += srcIdx
-        if moveLen != 1  
-          delta += '~' + moveLen
-        delta += '@' + dstIdx
-        ++moveDeltaCount  
-      shiftSum += chunk.shiftSum
-    if moveDeltaCount > 0
-      delta += ']'
-
-    if isRoot
-      delta = '|' + delta
-    return delta
-    return @getPlainDelta src, dst, isRoot
-
-
-  getDelta: (src, dst, isRoot) ->
-    if _.isArray src
-      if _.isArray dst
-        return @getArrayDelta src, dst, isRoot
+  getDelta: (have, wish, isRoot) ->
+    if _.isArray have
+      if _.isArray wish
+        return @getArrayDelta have, wish, isRoot
       else
-        return @getPlainDelta src, dst, isRoot
-    else if _.isObject src
-      if not _.isArray(dst) and _.isObject(dst)
-        return @getObjectDelta src, dst, isRoot
+        return @getPlainDelta have, wish, isRoot
+    else if _.isObject have
+      if not _.isArray(wish) and _.isObject(wish)
+        return @getObjectDelta have, wish, isRoot
       else
-        return @getPlainDelta src, dst, isRoot
-    else #scalar src
-      if src != dst
-        return @getPlainDelta src, dst, isRoot
+        return @getPlainDelta have, wish, isRoot
+    else #scalar have
+      if have != wish
+        return @getPlainDelta have, wish, isRoot
     null  
 
 
@@ -262,4 +338,4 @@ class Differ
 
 
 exports.Differ = Differ
-exports.DiffChunk = DiffChunk
+exports.Transposer = Transposer
