@@ -6,27 +6,90 @@ errors = require './errors'
 Idxer = require './idxer'
 
 
-class Transposer
+class Modifier
 
-  constructor: (@tdx, @haveBegin, @haveLen, @wishBegin, @wishLen) ->
-    @moves = []
-    @moveSum = 0
+  constructor: (@mdx, @haveBegin, @haveLen, @wishBegin, @wishLen) ->
+    @rawLegs = []
     @adjust = 0    # of inserts - # of deletes
 
-  addMove: (move) ->
-    @moves.push move
-    @moveSum += move.len
+  addRawLeg: (leg) ->
+    @rawLegs.push leg
 
-  prepareMoves: ->
-    @moves.sort (m1, m2) ->
-      if m1.miOfs < m2.miOfs
-        -1
-      else if m1.miOfs > m2.miOfs
-        +1
-      else if m1.len < m2.len
-        -1
+  setupLegs: ->
+    mdx = @mdx
+    outLegs = _(@rawLegs).filter((leg) -> leg.srcMdx == mdx).sortBy('srcOfs').value()
+    inLegs = _(@rawLegs).filter((leg) -> leg.dstMdx == mdx).sortBy('dstOfs').value()
+    debug 'setupLegs: mdx=%o, outLegs=%o, inLegs=%o', mdx, outLegs, inLegs
+    legs = []
+    outLastEnd = 0
+    inLastEnd = 0
+   
+    haveLen = @haveLen
+    wishLen = @wishLen
+    outVdx = 0
+    inVdx = 0
+    outLegIdx = 0
+    inLegIdx = 0
+
+    nextOut = ->
+      if outLegIdx < outLegs.length
+        outLeg = outLegs[outLegIdx++]
+        outVdx += outLeg.srcOfs - outLastEnd
+        outLastEnd = outLeg.srcOfs + outLeg.len
+        outLeg
       else
-        +1
+        outVdx += haveLen - outLastEnd
+        null
+
+    nextIn = ->
+      if inLegIdx < inLegs.length
+        inLeg = inLegs[inLegIdx++]
+        inVdx += inLeg.dstOfs - inLastEnd
+        inLastEnd = inLeg.dstOfs + inLeg.len
+        inLeg
+      else
+        inVdx += wishLen - inLastEnd
+        null
+
+    outLeg = nextOut()
+    inLeg = nextIn()
+
+    rr = 16
+    loop
+      debug 'setupLegs:   outVdx=%o, inVdx=%o, outLeg=%o, inLeg=%o', outVdx, inVdx, outLeg, inLeg
+      if outVdx < inVdx or (outVdx == inVdx and not inLeg?)
+        if outLeg?
+          outLeg.srcVdx = outVdx
+          legs.push outLeg
+          outLeg = nextOut()
+        else
+          # debug 'setupLegs:   insert'
+          legs.push
+            dstMdx: @mdx
+            dstVdx: outVdx 
+            len: inVdx - outVdx
+          outVdx = inVdx
+      else    
+        if inLeg?
+          inLeg.dstVdx = inVdx
+          legs.push inLeg
+          inLeg = nextIn()
+        else  
+          # debug 'setupLegs:   delete'
+          legs.push
+            srcMdx: @mdx
+            srcVdx: inVdx 
+            len: outVdx - inVdx
+          inVdx = outVdx
+      if not inLeg? and not outLeg? and outVdx == inVdx   
+        break
+      if --rr == 0
+        break
+
+    # debug 'setupLegs: mdx=%o, legs=%o', mdx, legs
+    @rawLegs = null
+    @legs = legs
+        
 
   getDeletes: (cb) ->
     delRest = @haveLen - @wishLen + @moveSum
@@ -63,71 +126,47 @@ class Transposer
         delEnd = move.miOfs
       @adjust -= delLen
 
-  putMove: (yuTdx, yuMove) ->
-    debug 'putMove: yuTdx=%o, yuMove=%o %o', yuTdx, yuMove, # @
-    shift = 0
-    for miMove in @moves
-      if miMove.yuTdx?
-        after =
-          if miMove.miOfs > yuMove.yuOfs
-            true
-          else if miMove.miOfs < yuMove.yuOfs
-            false
-          else if miMove.len < 100
-            true
-          else
-            false
-        if after
-          debug 'putMove: miMove=%o, after=%o', miMove, after
-          continue
-        done =
-          if miMove.yuTdx < yuTdx
-            true
-          else if miMove.yuTdx > yuTdx
-            false
-          else if miMove.yuOfs < yuMove.miOfs
-            true
-          else if miMove.yuOfs > yuMove.miOfs
-            false
-          else if miMove.len < yuMove.len
-            true
-          else
-            false
-        debug 'putMove: miMove=%o, done=%o', miMove, done
-        if done
-        else
-          if miMove.len > 0
-            shift -= miMove.len
-          if miMove.len < 0
-            shift -= miMove.len
-
-    @adjust -= yuMove.len
-    debug 'putMove: shift=%o', shift
-    yuMove.yuOfs + shift
+  putMove: (leg) ->
+    debug 'putMove: leg=%o', leg
+    legLen = leg.len
+    isOut = leg.srcMdx == @mdx
+    yuMdx = if isOut then leg.dstMdx else leg.srcMdx
+    isUp = leg.dstMdx > leg.srcMdx
+    miLoc = 0
+    if isOut
+      @adjust -= legLen
+    else
+      @adjust += legLen
+    debug 'putMove: miLoc=%o', miLoc
+    miLoc
 
 
-  getMoves: (ad, miOff, cb) ->
+  getMoves: (ad, miModOff, cb) ->
     thisShift = 0
-    for move in @moves
-      moveLen = move.len
-      debug 'getMoves: move=%o thisShift=%o', move, thisShift
-      if move.yuTdx?
-        # real move
-        if move.yuTdx > @tdx
-          # todo
-          yuOff = miOff + ad.getOffDiff @tdx, move.yuTdx
-          debug 'getMoves: miOff=%o, yuOff=%o', miOff, yuOff
-          yuTransposer = ad.transposers[move.yuTdx]
-          yuOfs = yuTransposer.putMove @tdx, move
-          miIdx = @haveBegin + move.miOfs + miOff + thisShift
-          yuIdx = yuTransposer.haveBegin + yuOfs + yuOff
-          if moveLen > 0
-            cb yuIdx, miIdx, moveLen
-          else
-            cb miIdx, yuIdx + moveLen, -moveLen
-          @adjust += moveLen
-      thisShift += moveLen
-    miOff + @adjust
+    miVdx = 0
+    miLoc = 0
+    for leg in @legs
+      legLen = leg.len
+      isOut = leg.srcMdx == @mdx
+      yuMdx = if isOut then leg.dstMdx else leg.srcMdx
+      if yuMdx?
+        isUp = leg.dstMdx > leg.srcMdx
+        debug 'getMoves: isUp=%o, isOut=%o leg=%o thisShift=%o', isUp, isOut, leg, thisShift
+        if isUp == isOut
+          yuModifier = ad.modifiers[yuMdx]
+          yuModOff = miModOff + ad.getModOffDiff @mdx, yuMdx
+          debug 'getMoves: miModOff=%o, yuModOff=%o', miModOff, yuModOff
+          yuLoc = yuModifier.putMove leg
+          miIdx = @haveBegin + miLoc + miModOff + thisShift
+          yuIdx = yuModifier.haveBegin + yuLoc + yuModOff
+          if isUp
+            cb miIdx, yuIdx - legLen, legLen
+            @adjust -= legLen
+          else  
+            cb yuIdx, miIdx, legLen
+            @adjust += legLen
+        else    
+    miModOff + @adjust
 
 
 class ArrayDiff
@@ -136,9 +175,9 @@ class ArrayDiff
     @have = have
     @wish = wish
     @setupIdxers()
-    @setupTransposers()
-    if @transposers.length > 0
-      @setupMoves()
+    @setupModifiers()
+    if @modifiers.length > 0
+      @setupLegs()
 
   setupIdxers: ->
     haveIdxer = new Idxer @wsonDiff, @have
@@ -150,91 +189,98 @@ class ArrayDiff
     @haveIdxer = haveIdxer
     @wishIdxer = wishIdxer
 
-  setupTransposers: ->
+  setupModifiers: ->
     haveIdxer = @haveIdxer
     wishIdxer = @wishIdxer
 
-    transposers = []
+    modifiers = []
     wishKeyUses = {}
 
     d = mdiff(haveIdxer.keys, wishIdxer.keys).scanDiff (haveBegin, haveEnd, wishBegin, wishEnd) ->
-      debug 'setupTransposers: %o..%o %o..%o', haveBegin, haveEnd, wishBegin, wishEnd
+      debug 'setupModifiers: %o..%o %o..%o', haveBegin, haveEnd, wishBegin, wishEnd
       haveLen = haveEnd - haveBegin
       wishLen = wishEnd - wishBegin
-      tdx = transposers.length
-      transposer = new Transposer tdx, haveBegin, haveLen, wishBegin, wishLen
-      transposers.push transposer
+      mdx = modifiers.length
+      modifier = new Modifier mdx, haveBegin, haveLen, wishBegin, wishLen
+      modifiers.push modifier
 
       wishOfs = 0
       while wishOfs < wishLen
         wishKey = wishIdxer.keys[wishBegin + wishOfs]
         keyUse = wishKeyUses[wishKey]
-        useTo = [tdx, wishOfs]
+        useTo = [mdx, wishOfs]
         if keyUse?
           keyUse.push useTo
         else
           wishKeyUses[wishKey] = [useTo]
         ++wishOfs
-    # debug 'setupTransposers: d=%o', d
-    # for transposer in transposers
-    #    debug '  %o', transposer
+    # debug 'setupModifiers: d=%o', d
+    # for modifier in modifiers
+    #    debug '  %o', modifier
     # debug '  wishKeyUses=%o', wishKeyUses
-    @transposers = transposers
+    @modifiers = modifiers
     @wishKeyUses = wishKeyUses
 
-  setupMoves: ->
+  setupLegs: ->
     haveIdxer = @haveIdxer
     wishKeyUses = @wishKeyUses
-    transposers = @transposers
-    for srcTransposer, srcTdx in transposers
-      srcBegin = srcTransposer.haveBegin
-      srcLen   = srcTransposer.haveLen
+    modifiers = @modifiers
+    for srcModifier, srcMdx in modifiers
+      srcBegin = srcModifier.haveBegin
+      srcLen   = srcModifier.haveLen
       srcOfs = 0
+      leg = null
       while srcOfs < srcLen
         key = haveIdxer.keys[srcBegin + srcOfs]
         keyUse = wishKeyUses[key]
         if keyUse and keyUse.length > 0
-          [dstTdx, dstOfs] = keyUse.pop()
-          dstTransposer = transposers[dstTdx]
-          moveLen = 1
-          srcTransposer.addMove
-            miOfs: srcOfs
-            yuTdx: dstTdx
-            yuOfs: dstOfs
-            len:   -moveLen
-          dstTransposer.addMove
-            miOfs: dstOfs
-            yuTdx: srcTdx
-            yuOfs: srcOfs
-            len:   moveLen
+          [dstMdx, dstOfs] = keyUse.pop()
+          dstModifier = modifiers[dstMdx]
+          if leg? and dstMdx == leg.dstMdx and srcOfs == leg.srcOfs + leg.len and dstOfs == leg.dstOfs + leg.len 
+            ++leg.len 
+          else 
+            if leg?
+              srcModifier.addRawLeg leg
+              dstModifier.addRawLeg leg
+            leg =
+              srcMdx: srcMdx
+              srcOfs: srcOfs
+              dstMdx: dstMdx
+              dstOfs: dstOfs
+              len: 1
         ++srcOfs
-    for transposer in transposers
-      transposer.prepareMoves()
-    debug 'setupMoves:'
-    for transposer in transposers
-       debug '  %o', transposer
+      if leg?  
+        srcModifier.addRawLeg leg
+        dstModifier.addRawLeg leg
+    for modifier in modifiers
+      modifier.setupLegs()
+    debug 'setupLegs:'
+    for modifier in modifiers
+       debug '  mdx=%o', modifier.mdx
+       for leg in modifier.legs
+         debug '    %o', leg
 
-  getOffDiff: (fromTdx, toTdx) ->
+  getModOffDiff: (fromMdx, toMdx) ->
     sum = 0
-    transposers = @transposers
-    if fromTdx < toTdx
-      idx = fromTdx
-      while idx < toTdx
-        debug 'getOffDiff: idx=%o, +adjust=%o', idx, transposers[idx]
-        sum += transposers[idx++].adjust
+    modifiers = @modifiers
+    if fromMdx < toMdx
+      idx = fromMdx
+      while idx < toMdx
+        # debug 'getModOffDiff: idx=%o, +adjust=%o', idx, modifiers[idx]
+        sum += modifiers[idx++].adjust
     else
-      idx = toTdx
-      while idx < fromTdx
-        debug 'getOffDiff: idx=%o, -adjust=%o', idx, transposers[idx]
-        sum -= transposers[idx++].adjust
+      idx = toMdx
+      while idx < fromMdx
+        # debug 'getModOffDiff: idx=%o, -adjust=%o', idx, modifiers[idx]
+        sum -= modifiers[idx++].adjust
     sum
 
   getDeleteDelta: ->
     delta = ''
     count = 0
-    for transposer in @transposers by -1
-      debug 'getDeleteDelta: transposer=%o', transposer
-      transposer.getDeletes (delIdx, delLen) ->
+    for modifier in @modifiers by -1
+      debug 'getDeleteDelta: modifier=%o', modifier
+      modifier.getDeletes (delIdx, delLen) ->
         debug 'getDeleteDelta: delIdx=%o, delLen=%o', delIdx, delLen
         delta += if count == 0 then '[-' else '|'
         delta += delIdx
@@ -245,17 +291,17 @@ class ArrayDiff
       delta += ']'
 
     debug 'getDeleteDelta:'
-    for transposer in @transposers
-       debug '  %o', transposer
+    for modifier in @modifiers
+       debug '  %o', modifier
     delta
 
   getMoveDelta: ->
     delta = ''
     count = 0
-    miOff = 0
-    for transposer in @transposers
-      debug 'getMoveDelta: %o', transposer
-      miOff = transposer.getMoves @, miOff, (srcIdx, dstIdx, moveLen) ->
+    miModOff = 0
+    for modifier in @modifiers
+      debug 'getMoveDelta: mdx=%o', modifier.mdx
+      miModOff = modifier.getMoves @, miModOff, (srcIdx, dstIdx, moveLen) ->
         debug 'getMoveDelta: srcIdx=%o, dstIdx=%o, moveLen=%o', srcIdx, dstIdx, moveLen
         delta += if count == 0 then '[!' else '|'
         delta += srcIdx
@@ -266,17 +312,17 @@ class ArrayDiff
     if count > 0
       delta += ']'
 
-    debug 'getMoveDelta:'
-    for transposer in @transposers
-       debug '  %o', transposer
+    # debug 'getMoveDelta:'
+    # for modifier in @modifiers
+    #    debug '  %o', modifier
     delta
 
   getDelta: ->
-    if @transposers.length == 0
+    if @modifiers.length == 0
       null
     else
       delta = ''
-      delta += @getDeleteDelta()
+      # delta += @getDeleteDelta()
       # @getMoveDelta()
       delta += @getMoveDelta()
       delta
@@ -371,4 +417,4 @@ class Differ
 
 
 exports.Differ = Differ
-exports.Transposer = Transposer
+exports.Modifier = Modifier
