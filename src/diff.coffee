@@ -9,16 +9,17 @@ Idxer = require './idxer'
 class Modifier
 
   constructor: (@mdx, @haveBegin, @haveLen, @wishBegin, @wishLen) ->
-    @rawLegs = []
-    @adjust = 0    # of inserts - # of deletes
+    @legs = []
+    @balance = 0    # of inserts - # of deletes
+    @insDelSum = 0
 
-  addRawLeg: (leg) ->
-    @rawLegs.push leg
+  addPreLeg: (leg) ->
+    @legs.push leg
 
   setupLegs: ->
     mdx = @mdx
-    outLegs = _(@rawLegs).filter((leg) -> leg.srcMdx == mdx).sortBy('srcOfs').value()
-    inLegs = _(@rawLegs).filter((leg) -> leg.dstMdx == mdx).sortBy('dstOfs').value()
+    outLegs = _(@legs).filter((leg) -> leg.srcMdx == mdx).sortBy('srcOfs').value()
+    inLegs = _(@legs).filter((leg) -> leg.dstMdx == mdx).sortBy('dstOfs').value()
     debug 'setupLegs: mdx=%o, outLegs=%o, inLegs=%o', mdx, outLegs, inLegs
     legs = []
     outLastEnd = 0
@@ -59,27 +60,39 @@ class Modifier
       debug 'setupLegs:   outVdx=%o, inVdx=%o, outLeg=%o, inLeg=%o', outVdx, inVdx, outLeg, inLeg
       if outVdx < inVdx or (outVdx == inVdx and not inLeg?)
         if outLeg?
-          outLeg.srcVdx = outVdx
-          legs.push outLeg
+          legs.push
+            vdx: outVdx
+            len: -outLeg.len
+            id: outLeg.id
+            yuMdx: outLeg.dstMdx
+            done: false
           outLeg = nextOut()
         else
-          # debug 'setupLegs:   insert'
+          # insert
+          legLen = inVdx - outVdx
           legs.push
-            dstMdx: @mdx
-            dstVdx: outVdx 
-            len: inVdx - outVdx
+            vdx: outVdx 
+            len: legLen
+            done: false
+          @insDelSum += legLen
           outVdx = inVdx
       else    
         if inLeg?
-          inLeg.dstVdx = inVdx
-          legs.push inLeg
+          legs.push
+            vdx: inVdx
+            len: inLeg.len
+            id: inLeg.id
+            yuMdx: inLeg.srcMdx
+            done: false
           inLeg = nextIn()
         else  
-          # debug 'setupLegs:   delete'
+          # delete
+          legLen = inVdx - outVdx
           legs.push
-            srcMdx: @mdx
-            srcVdx: inVdx 
-            len: outVdx - inVdx
+            vdx: inVdx 
+            len: legLen 
+            done: false
+          @insDelSum += legLen
           inVdx = outVdx
       if not inLeg? and not outLeg? and outVdx == inVdx   
         break
@@ -87,7 +100,6 @@ class Modifier
         break
 
     # debug 'setupLegs: mdx=%o, legs=%o', mdx, legs
-    @rawLegs = null
     @legs = legs
         
 
@@ -124,49 +136,40 @@ class Modifier
         delRest -= delLen
       if moveIdx >= 0
         delEnd = move.miOfs
-      @adjust -= delLen
+      @balance -= delLen
 
-  putMove: (leg) ->
-    debug 'putMove: leg=%o', leg
-    legLen = leg.len
-    isOut = leg.srcMdx == @mdx
-    yuMdx = if isOut then leg.dstMdx else leg.srcMdx
-    isUp = leg.dstMdx > leg.srcMdx
-    miLoc = 0
-    if isOut
-      @adjust -= legLen
-    else
-      @adjust += legLen
-    debug 'putMove: miLoc=%o', miLoc
-    miLoc
+  putMove: (legId) ->
+    debug 'putMove: legId=%o', legId
+    for leg in @legs
+      if leg.id == legId
+        @balance += leg.len
+        return 0
 
 
   getMoves: (ad, miModOff, cb) ->
-    thisShift = 0
     miVdx = 0
     miLoc = 0
     for leg in @legs
       legLen = leg.len
-      isOut = leg.srcMdx == @mdx
-      yuMdx = if isOut then leg.dstMdx else leg.srcMdx
+      yuMdx = leg.yuMdx
       if yuMdx?
-        isUp = leg.dstMdx > leg.srcMdx
-        debug 'getMoves: isUp=%o, isOut=%o leg=%o thisShift=%o', isUp, isOut, leg, thisShift
-        if isUp == isOut
+        debug 'getMoves: leg=%o', leg
+        if leg.yuMdx > @mdx
           yuModifier = ad.modifiers[yuMdx]
           yuModOff = miModOff + ad.getModOffDiff @mdx, yuMdx
           debug 'getMoves: miModOff=%o, yuModOff=%o', miModOff, yuModOff
-          yuLoc = yuModifier.putMove leg
-          miIdx = @haveBegin + miLoc + miModOff + thisShift
+          yuLoc = yuModifier.putMove leg.id
+          debug 'getMoves: miLoc=%o, yuLoc=%o', miLoc, yuLoc
+          miIdx = @haveBegin + miLoc + miModOff
           yuIdx = yuModifier.haveBegin + yuLoc + yuModOff
-          if isUp
-            cb miIdx, yuIdx - legLen, legLen
-            @adjust -= legLen
+          if legLen < 0
+            cb miIdx, yuIdx + legLen, -legLen
+            @balance += legLen
           else  
             cb yuIdx, miIdx, legLen
-            @adjust += legLen
+            @balance += legLen
         else    
-    miModOff + @adjust
+    miModOff + @balance
 
 
 class ArrayDiff
@@ -230,6 +233,7 @@ class ArrayDiff
       srcLen   = srcModifier.haveLen
       srcOfs = 0
       leg = null
+      legId = 0
       while srcOfs < srcLen
         key = haveIdxer.keys[srcBegin + srcOfs]
         keyUse = wishKeyUses[key]
@@ -240,9 +244,10 @@ class ArrayDiff
             ++leg.len 
           else 
             if leg?
-              srcModifier.addRawLeg leg
-              dstModifier.addRawLeg leg
+              srcModifier.addPreLeg leg
+              dstModifier.addPreLeg leg
             leg =
+              id: legId++
               srcMdx: srcMdx
               srcOfs: srcOfs
               dstMdx: dstMdx
@@ -250,13 +255,13 @@ class ArrayDiff
               len: 1
         ++srcOfs
       if leg?  
-        srcModifier.addRawLeg leg
-        dstModifier.addRawLeg leg
+        srcModifier.addPreLeg leg
+        dstModifier.addPreLeg leg
     for modifier in modifiers
       modifier.setupLegs()
     debug 'setupLegs:'
     for modifier in modifiers
-       debug '  mdx=%o', modifier.mdx
+       debug '  mdx=%o insDelSum=%o', modifier.mdx, modifier.insDelSum
        for leg in modifier.legs
          debug '    %o', leg
 
@@ -266,13 +271,13 @@ class ArrayDiff
     if fromMdx < toMdx
       idx = fromMdx
       while idx < toMdx
-        # debug 'getModOffDiff: idx=%o, +adjust=%o', idx, modifiers[idx]
-        sum += modifiers[idx++].adjust
+        # debug 'getModOffDiff: idx=%o, +balance=%o', idx, modifiers[idx]
+        sum += modifiers[idx++].balance
     else
       idx = toMdx
       while idx < fromMdx
-        # debug 'getModOffDiff: idx=%o, -adjust=%o', idx, modifiers[idx]
-        sum -= modifiers[idx++].adjust
+        # debug 'getModOffDiff: idx=%o, -balance=%o', idx, modifiers[idx]
+        sum -= modifiers[idx++].balance
     sum
 
   getDeleteDelta: ->

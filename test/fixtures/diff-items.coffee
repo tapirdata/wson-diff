@@ -139,7 +139,7 @@ module.exports = [
     # delta: '|[!8@3]'
   }
   {
-    description: 'double isolted backward move'
+    description: 'double isolated backward move'
     have: 'abcdefghijkl'.split ''
     wish: 'abcidkefghjl'.split ''
     # delta: '|[!8@3]'
