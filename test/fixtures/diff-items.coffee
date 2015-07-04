@@ -166,9 +166,29 @@ module.exports = [
     wish: 'abijkfghcdel'.split ''
   }
   {
-    description: 'block exchange permutate'
+    description: 'multi exchange #1'
     have: 'abcdefghijkl'.split ''
-    wish: 'abjikfghedcl'.split ''
+    wish: 'abefjgckldhi'.split ''
+  }
+  {
+    description: 'multi exchange #2'
+    have: 'abcdefghijkl'.split ''
+    wish: 'jgdhiabecklf'.split ''
+  }
+  {
+    description: 'backward split delete'
+    have: 'abcdefghijkl'.split ''
+    wish: 'abicdefkl'.split ''
+  }
+  {
+    description: 'reverse'
+    have: 'abcdefghijkl'.split ''
+    wish: 'lkjihgfedcba'.split ''
+  }
+  {
+    description: 'forward split delete'
+    have: 'abcdefghijkl'.split ''
+    wish: 'abghijkle'.split ''
   }
 ]
 

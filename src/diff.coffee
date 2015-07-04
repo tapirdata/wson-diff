@@ -17,9 +17,12 @@ class Modifier
     @legs.push leg
 
   setupLegs: ->
+    # debug 'setupLegs: mdx=%o legs:', @mdx
+    # for leg in @legs
+    #   debug '  %o', leg
     mdx = @mdx
-    outLegs = _(@legs).filter((leg) -> leg.srcMdx == mdx).sortBy('srcBeg').value()
-    inLegs = _(@legs).filter((leg) -> leg.dstMdx == mdx).sortBy('dstBeg').value()
+    outLegs = _(@legs).filter((leg) -> leg.haveMdx == mdx).sortBy('haveOfs').value()
+    inLegs = _(@legs).filter((leg) -> leg.wishMdx == mdx).sortBy('wishOfs').value()
     debug 'setupLegs: mdx=%o, outLegs=%o, inLegs=%o', mdx, outLegs, inLegs
 
     legs = []
@@ -36,8 +39,8 @@ class Modifier
     nextOutLeg = ->
       if outLegIdx < outLegs.length
         outLeg = outLegs[outLegIdx++]
-        outGapSum += outLeg.srcBeg - outEnd
-        outEnd = outLeg.srcBeg + outLeg.len
+        outGapSum += outLeg.haveOfs - outEnd
+        outEnd = outLeg.haveOfs + outLeg.len
         outLeg
       else
         outGapSum += haveLen - outEnd
@@ -46,8 +49,8 @@ class Modifier
     nextInLeg = ->
       if inLegIdx < inLegs.length
         inLeg = inLegs[inLegIdx++]
-        inGapSum += inLeg.dstBeg - inEnd
-        inEnd = inLeg.dstBeg + inLeg.len
+        inGapSum += inLeg.wishOfs - inEnd
+        inEnd = inLeg.wishOfs + inLeg.len
         inLeg
       else
         inGapSum += wishLen - inEnd
@@ -62,7 +65,7 @@ class Modifier
       takeOut = false
       extraLen = 0
       inLater = inGapSum - outGapSum
-      debug 'setupLegs:   gapSum=%o outGapSum=%o inGapSum=%o outLeg=%o inLeg=%o', gapSum, outGapSum, inGapSum, outLeg, inLeg
+      # debug 'setupLegs:   gapSum=%o outGapSum=%o inGapSum=%o outLeg=%o inLeg=%o', gapSum, outGapSum, inGapSum, outLeg, inLeg
       if outLeg?
         if inLeg?
           # both legs: take the first one
@@ -86,7 +89,7 @@ class Modifier
         else
           # no leg
           if inLater == 0
-            @gapSum = gapSum
+            @closeGap = inGapSum - gapSum
             break
           else
             extraLen = inLater
@@ -94,6 +97,7 @@ class Modifier
       if extraLen < 0
         # delete 
         legs.push
+          id: @ad.nextLegId++
           gap: inGapSum - gapSum
           len: extraLen
           done: false
@@ -103,6 +107,7 @@ class Modifier
       else if extraLen > 0
         # insert 
         legs.push
+          id: @ad.nextLegId++
           gap: outGapSum - gapSum
           len: extraLen
           done: false
@@ -111,19 +116,19 @@ class Modifier
         @insertBalance += inLater
       if takeOut
         legs.push
+          id: outLeg.id
           gap: outGapSum - gapSum
           len: -outLeg.len
-          id: outLeg.id
-          yuMdx: outLeg.dstMdx
+          youMdx: outLeg.wishMdx
           done: false
         gapSum = outGapSum
         outLeg = nextOutLeg()
       if takeIn
         legs.push
+          id: inLeg.id
           gap: inGapSum - gapSum
           len: inLeg.len
-          id: inLeg.id
-          yuMdx: inLeg.srcMdx
+          youMdx: inLeg.haveMdx
           done: false
         gapSum = inGapSum
         inLeg = nextInLeg()
@@ -137,16 +142,19 @@ class Modifier
     delRest = -@insertBalance
     if delRest <= 0
       return
-    delEndLoc = @haveLen
+    delEndLoc = @haveLen - @closeGap
     for leg in @legs by -1
       debug 'getDeletes: delRest=%o delEndLoc=%o leg=%o', delRest, delEndLoc, leg
       legLen = leg.len
-      if leg.yuMdx? or legLen > 0
+      if leg.youMdx? or legLen > 0
         delEndLoc -= leg.gap
         # debug 'getDeletes: * delEndLoc=%o', delEndLoc, leg.done, legLen > 0
-        if leg.done == (legLen > 0)
-          delEndLoc += legLen
-          # debug 'getDeletes: ** delEndLoc=%o', delEndLoc
+        if legLen > 0
+          if leg.done
+            delEndLoc -= legLen
+        else    
+          if not leg.done
+            delEndLoc += legLen
       else
         if legLen < 0
           delBegLoc = delEndLoc + legLen
@@ -160,39 +168,58 @@ class Modifier
     return null      
 
   putMove: (legId) ->
-    debug 'putMove: legId=%o', legId
+    debug 'putMove:   legId=%o', legId
+    meLoc = 0
     for leg in @legs
-      if leg.id == legId
-        @doneBalance += leg.len
-        leg.done = true  
-        return 0
-
-
-  getMoves: (miModOff, cb) ->
-    ad = @ad
-    miLoc = 0
-    for leg in @legs
+      debug 'putMove:     meLoc=%o leg=%o', meLoc, leg
+      meLoc += leg.gap
       legLen = leg.len
-      yuMdx = leg.yuMdx
-      if yuMdx?
-        debug 'getMoves: leg=%o', leg
-        if leg.yuMdx > @mdx
-          yuModifier = ad.modifiers[yuMdx]
-          yuModOff = miModOff + ad.getModOffDiff @mdx, yuMdx
-          debug 'getMoves: miModOff=%o, yuModOff=%o', miModOff, yuModOff
-          yuLoc = yuModifier.putMove leg.id
-          debug 'getMoves: miLoc=%o, yuLoc=%o', miLoc, yuLoc
-          miIdx = @haveBegin + miLoc + miModOff
-          yuIdx = yuModifier.haveBegin + yuLoc + yuModOff
-          if legLen < 0
-            cb miIdx, yuIdx + legLen, -legLen
-            @doneBalance += legLen
-          else  
-            cb yuIdx, miIdx, legLen
-            @doneBalance += legLen
-          leg.done = true  
+      if leg.id == legId
+        @doneBalance += legLen
+        leg.done = true  
+        return meLoc
+      else
+        if legLen > 0
+          if leg.done
+            meLoc += legLen
         else    
-    miModOff + @doneBalance
+          if not leg.done
+            meLoc -= legLen
+    return # should never arrive here
+
+
+  getMoves: (meModOff, cb) ->
+    debug 'getMoves: mdx=%o', @mdx
+    ad = @ad
+    meLoc = 0
+    for leg in @legs
+      debug 'getMoves:   meLoc=%o leg=%o', meLoc, leg
+      meLoc += leg.gap
+      legLen = leg.len
+      youMdx = leg.youMdx
+      if youMdx? and leg.youMdx > @mdx 
+        youModifier = ad.modifiers[youMdx]
+        youModOff = meModOff + ad.getModOffDiff @mdx, youMdx
+        debug 'getMoves:   meModOff=%o, youModOff=%o', meModOff, youModOff
+        youLoc = youModifier.putMove leg.id
+        debug 'getMoves:   meLoc=%o, youLoc=%o', meLoc, youLoc
+        meIdx = @haveBegin + meLoc + meModOff
+        youModifier = youModifier.haveBegin + youLoc + youModOff
+        if legLen < 0
+          cb meIdx, youModifier + legLen, -legLen
+        else  
+          cb youModifier, meIdx, legLen
+          meLoc += legLen
+        @doneBalance += legLen
+        leg.done = true  
+      else    
+        if legLen > 0
+          if leg.done
+            meLoc += legLen
+        else    
+          if not leg.done
+            meLoc -= legLen
+    meModOff + @doneBalance
 
 
 class ArrayDiff
@@ -245,38 +272,44 @@ class ArrayDiff
     @wishKeyUses = wishKeyUses
 
   setupLegs: ->
+    # debug 'setupLegs: @wishKeyUses=%o', @wishKeyUses
     haveIdxer = @haveIdxer
     wishKeyUses = @wishKeyUses
     modifiers = @modifiers
-    for srcModifier, srcMdx in modifiers
-      srcBegin = srcModifier.haveBegin
-      srcLen   = srcModifier.haveLen
-      srcBeg = 0
+    nextLegId = 0
+    for modifier in modifiers
+      haveBegin = modifier.haveBegin
+      haveLen  = modifier.haveLen
+      # debug 'setupLegs: modifier mdx=%o %o~%o', modifier.mdx, haveBegin, haveLen
       leg = null
-      legId = 0
-      while srcBeg < srcLen
-        key = haveIdxer.keys[srcBegin + srcBeg]
-        keyUse = wishKeyUses[key]
-        if keyUse and keyUse.length > 0
-          [dstMdx, dstBeg] = keyUse.pop()
-          dstModifier = modifiers[dstMdx]
-          if leg? and dstMdx == leg.dstMdx and srcBeg == leg.srcBeg + leg.len and dstBeg == leg.dstBeg + leg.len 
+      for haveOfs in [0...haveLen]
+        key = haveIdxer.keys[haveBegin + haveOfs]
+        wishKeyUse = wishKeyUses[key]
+        # debug 'setupLegs:   key=%o wishKeyUse', key, wishKeyUse
+        if wishKeyUse and wishKeyUse.length > 0
+          [wishMdx, wishOfs] = wishKeyUse.pop()
+          # debug 'setupLegs:   modifier mdx=%o leg=%o wishMdx=%o, haveOfs=%o, wishOfs=%o', modifier.mdx, leg, wishMdx, haveOfs, wishOfs
+          if leg? and wishMdx == leg.wishMdx and haveOfs == leg.haveOfs + leg.len and wishOfs == leg.wishOfs + leg.len 
             ++leg.len 
+            # debug 'setupLegs:   ..%o', leg
           else 
             if leg?
-              srcModifier.addPreLeg leg
-              dstModifier.addPreLeg leg
+              # debug 'setupLegs:   ->%o', leg
+              modifiers[leg.haveMdx].addPreLeg leg
+              modifiers[leg.wishMdx].addPreLeg leg
             leg =
-              id: legId++
-              srcMdx: srcMdx
-              srcBeg: srcBeg
-              dstMdx: dstMdx
-              dstBeg: dstBeg
+              id: nextLegId++
+              haveMdx: modifier.mdx
+              haveOfs: haveOfs
+              wishMdx: wishMdx
+              wishOfs: wishOfs
               len: 1
-        ++srcBeg
       if leg?  
-        srcModifier.addPreLeg leg
-        dstModifier.addPreLeg leg
+        # debug 'setupLegs:   .->%o', leg
+        modifiers[leg.haveMdx].addPreLeg leg
+        modifiers[leg.wishMdx].addPreLeg leg
+    @nextLegId = nextLegId
+    # @debugModifiers 'setupLegs'
     for modifier in modifiers
       modifier.setupLegs()
     @debugModifiers 'setupLegs done.'
@@ -317,10 +350,9 @@ class ArrayDiff
   getMoveDelta: ->
     delta = ''
     count = 0
-    miModOff = 0
+    meModOff = 0
     for modifier in @modifiers
-      debug 'getMoveDelta: mdx=%o', modifier.mdx
-      miModOff = modifier.getMoves miModOff, (srcIdx, dstIdx, moveLen) ->
+      meModOff = modifier.getMoves meModOff, (srcIdx, dstIdx, moveLen) ->
         debug 'getMoveDelta: srcIdx=%o, dstIdx=%o, moveLen=%o', srcIdx, dstIdx, moveLen
         delta += if count == 0 then '[!' else '|'
         delta += srcIdx
@@ -345,9 +377,10 @@ class ArrayDiff
   debugModifiers: (title) ->
     debug title + ' modifiers:'
     for modifier in @modifiers
-      debug '  mdx=%o insertBalance=%o', modifier.mdx, modifier.insertBalance
+      debug '  mdx=%o have=%o~%o wish=%o~%o, insertBalance=%o', modifier.mdx, modifier.haveBegin, modifier.haveLen, modifier.wishBegin, modifier.wishLen, modifier.insertBalance
       for leg in modifier.legs
         debug '    %o', leg
+      debug '  closeGap=%o', modifier.closeGap
 
 
 class State
