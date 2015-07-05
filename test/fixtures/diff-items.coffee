@@ -230,5 +230,15 @@ module.exports = [
     have: 'abcdefghijkl'.split ''
     wish: 'aXYldfghbciZUVjek'.split ''
   }
+  {
+    description: 'single replace'
+    have: 'abcdefghijkl'.split ''
+    wish: 'abcdeFghijkl'.split ''
+  }
+  {
+    description: 'double block replace'
+    have: 'abcdefghijkl'.split ''
+    wish: 'abcdeFGhijkl'.split ''
+  }
 ]
 

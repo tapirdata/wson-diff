@@ -191,6 +191,28 @@ class Modifier
     return null      
 
 
+  getPatches: (meModOff, cb) ->
+    debug 'getPatches: mdx=%o have=%o~%o wish=%o~%o', @mdx, @haveBegin, @haveLen, @wishBegin, @wishLen
+    haveLoc = 0
+    wishLoc = 0
+    for leg in @legs
+      gap = leg.gap
+      legLen = leg.len
+      if gap > 0
+        cb @haveBegin + meModOff + haveLoc, @wishBegin + wishLoc, gap
+      haveLoc += gap
+      wishLoc += gap
+      if legLen > 0
+        if leg.done
+          haveLoc += legLen
+        wishLoc += legLen
+      else if not leg.done
+        haveLoc -= legLen
+    gap = @closeGap
+    if gap > 0
+      cb @haveBegin + meModOff + haveLoc, @wishBegin + wishLoc, gap
+
+
   putMove: (legId) ->
     debug 'putMove:   legId=%o', legId
     meLoc = 0
@@ -246,7 +268,7 @@ class Modifier
 
 class ArrayDiff
 
-  constructor: (@wsonDiff, have, wish) ->
+  constructor: (@state, have, wish) ->
     @have = have
     @wish = wish
     @setupIdxers()
@@ -255,10 +277,11 @@ class ArrayDiff
       @setupLegs()
 
   setupIdxers: ->
-    haveIdxer = new Idxer @wsonDiff, @have
-    wishIdxer = new Idxer @wsonDiff, @wish, haveIdxer.allString
+    wsonDiff = @state.wsonDiff
+    haveIdxer = new Idxer wsonDiff, @have
+    wishIdxer = new Idxer wsonDiff, @wish, haveIdxer.allString
     if haveIdxer.allString and not wishIdxer.allString
-      haveIdxer = new Idxer @wsonDiff, @have, false
+      haveIdxer = new Idxer wsonDiff, @have, false
     # debug 'setupIdxers: have keys=%o allString=%o', haveIdxer.keys, haveIdxer.allString
     # debug 'setupIdxers: wish keys=%o allString=%o', wishIdxer.keys, wishIdxer.allString
     @haveIdxer = haveIdxer
@@ -375,12 +398,12 @@ class ArrayDiff
     delta = ''
     count = 0
     meModOff = @getModOffDiff 0, @modifiers.length
-    debug 'getInsertDelta: meModOff=%o', meModOff
     wishIdxer = @wishIdxer
+    debug 'getInsertDelta: meModOff=%o', meModOff
     for modifier in @modifiers by -1
       meModOff -= modifier.doneBalance
       modifier.getInserts meModOff, (havePos, wishPos, len) ->
-        debug 'getInsertDelta: havePos=%o, wishPos=%o', havePos, wishPos, len
+        debug 'getInsertDelta: havePos=%o, wishPos=%o, len=%o', havePos, wishPos, len
         delta += if count == 0 then '[+' else '|'
         delta += havePos
         for i in [0...len]
@@ -391,6 +414,37 @@ class ArrayDiff
 
     @debugModifiers 'getInsertDelta done.' 
     delta    
+
+  getPatchDelta: ->
+    delta = ''
+    count = 0
+    meModOff = 0
+    have = @have
+    wish = @wish
+    state = @state
+    debug 'getPatchDelta: meModOff=%o', meModOff
+    for modifier in @modifiers by -1
+      modifier.getPatches meModOff, (havePos, wishPos, len) ->
+        debug 'getPatchDelta: havePos=%o, wishPos=%o, len=%o', havePos, wishPos, len
+        delta += if count == 0 then '{' else '|'
+        delta += havePos
+        canChain = true
+        for i in [0...len]
+          iDelta = state.getDelta(
+            have[havePos + i]
+            wish[wishPos + i]
+          )
+          if iDelta[0] != ':'
+            canChain = false
+          if i > 0 and not canChain  
+            delta += '|' + (havePos + i)
+          delta += iDelta
+        ++count
+      meModOff += modifier.doneBalance
+    if count > 0
+      delta += '}'
+    delta    
+      
 
   getMoveDelta: ->
     delta = ''
@@ -419,6 +473,7 @@ class ArrayDiff
       delta += @getDeleteDelta()
       delta += @getMoveDelta()
       delta += @getInsertDelta()
+      delta += @getPatchDelta()
       delta
      
   debugModifiers: (title) ->
@@ -484,7 +539,7 @@ class State
     null
 
   getArrayDelta: (have, wish, isRoot) ->
-    ad = new ArrayDiff @wsonDiff, have, wish
+    ad = new ArrayDiff @, have, wish
     delta = ad.getDelta()
     if delta?
       if isRoot

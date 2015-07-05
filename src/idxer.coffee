@@ -2,11 +2,11 @@ _ = require 'lodash'
 
 class Idxer 
   
-  constructor: (@wsonDiff, src, allString=true) ->
+  constructor: (@wsonDiff, vals, allString=true) ->
     # console.log 'Idxer allString=%s', allString 
     if allString
       # uses = {}
-      for val, idx in src
+      for val, idx in vals
         if not _.isString val
           allString = false
           break
@@ -14,12 +14,12 @@ class Idxer
         # if not use?
         #   uses[val] = use = []
         # use.push idx
-      keys = src 
+      keys = vals 
     if not allString    
       WSON = @wsonDiff.WSON
       # uses = {}
-      keys = new Array src.length
-      for val, idx in src
+      keys = new Array vals.length
+      for val, idx in vals
         key = WSON.stringify val
         keys[idx] = key
         # use = uses[key]
