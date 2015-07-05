@@ -28,6 +28,14 @@ class Idxer
         # use.push idx
     @keys = keys
     @allString = allString    
+  
+  getItem: (idx) ->
+    key = @keys[idx]
+    if @allString
+      @wsonDiff.WSON.escape key
+    else
+      key
+
 
 
 module.exports = Idxer

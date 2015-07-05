@@ -11,7 +11,7 @@ class Modifier
   constructor: (@ad, @mdx, @haveBegin, @haveLen, @wishBegin, @wishLen) ->
     @legs = []
     @doneBalance = 0    # of inserts - # of deletes already performed
-    @insertBalance = 0   # if > 0: extra inserts, if < 0: extra deletes
+    @restBalance = 0   # if < 0: extra inserts, if > 0: extra deletes
 
   addPreLeg: (leg) ->
     @legs.push leg
@@ -103,7 +103,7 @@ class Modifier
           done: false
         gapSum = inGapSum
         outGapSum = gapSum
-        @insertBalance += inLater
+        @restBalance -= inLater
       else if extraLen > 0
         # insert 
         legs.push
@@ -113,7 +113,7 @@ class Modifier
           done: false
         gapSum = outGapSum
         inGapSum = gapSum
-        @insertBalance += inLater
+        @restBalance -= inLater
       if takeOut
         legs.push
           id: outLeg.id
@@ -138,34 +138,58 @@ class Modifier
     @legs = legs
         
 
-  getDeletes: (cb) ->
-    delRest = -@insertBalance
-    if delRest <= 0
+  getDeletes: (meModOff, cb) ->
+    restBalance = @restBalance
+    if restBalance <= 0
       return
-    delEndLoc = @haveLen - @closeGap
+    haveLoc = @haveLen + @doneBalance - @closeGap
     for leg in @legs by -1
-      debug 'getDeletes: delRest=%o delEndLoc=%o leg=%o', delRest, delEndLoc, leg
+      debug 'getDeletes: meModOff=%o restBalance=%o haveLoc=%o leg=%o', meModOff, restBalance, haveLoc, leg
       legLen = leg.len
-      if leg.youMdx? or legLen > 0
-        delEndLoc -= leg.gap
-        # debug 'getDeletes: * delEndLoc=%o', delEndLoc, leg.done, legLen > 0
-        if legLen > 0
-          if leg.done
-            delEndLoc -= legLen
-        else    
-          if not leg.done
-            delEndLoc += legLen
-      else
-        if legLen < 0
-          delBegLoc = delEndLoc + legLen
-          cb @haveBegin + delBegLoc, -legLen
-          delEndLoc = delBegLoc - leg.gap
+      if legLen > 0
+        if leg.done
+          haveLoc -= legLen
+      else if not leg.done
+        haveLoc += legLen
+        if not leg.youMdx?
+          cb @haveBegin + meModOff + haveLoc, -legLen
           @doneBalance += legLen
           leg.done = true
-          delRest += legLen
-          if delRest == 0
+          restBalance += legLen
+          if restBalance == 0
             break
+      haveLoc -= leg.gap
+    @restBalance = restBalance    
     return null      
+
+  getInserts: (meModOff, cb) ->
+    debug 'getInserts: mdx=%o have=%o~%o wish=%o~%o', @mdx, @haveBegin, @haveLen, @wishBegin, @wishLen
+    restBalance = @restBalance
+    if restBalance >= 0
+      return
+    haveLoc = @haveLen + @doneBalance - @closeGap
+    wishLoc = @wishLen - @closeGap
+    for leg in @legs by -1
+      debug 'getInserts:   meModOff=%o restBalance=%o haveLoc=%o wishLoc=%o leg=%o', meModOff, restBalance, haveLoc, wishLoc, leg
+      legLen = leg.len
+      if legLen > 0
+        if leg.done
+          haveLoc -= legLen
+        else if not leg.youMdx?
+          cb @haveBegin + meModOff + haveLoc, @wishBegin + wishLoc - legLen, legLen 
+          @doneBalance += legLen
+          leg.done = true
+          restBalance += legLen
+          if restBalance == 0
+            break
+        wishLoc -= legLen
+      else if not leg.done
+        haveLoc += legLen
+      haveLoc -= leg.gap
+      wishLoc -= leg.gap
+    @restBalance = restBalance    
+    return null      
+
 
   putMove: (legId) ->
     debug 'putMove:   legId=%o', legId
@@ -182,9 +206,8 @@ class Modifier
         if legLen > 0
           if leg.done
             meLoc += legLen
-        else    
-          if not leg.done
-            meLoc -= legLen
+        else if not leg.done
+          meLoc -= legLen
     return # should never arrive here
 
 
@@ -203,8 +226,8 @@ class Modifier
         debug 'getMoves:   meModOff=%o, youModOff=%o', meModOff, youModOff
         youLoc = youModifier.putMove leg.id
         debug 'getMoves:   meLoc=%o, youLoc=%o', meLoc, youLoc
-        meIdx = @haveBegin + meLoc + meModOff
-        youModifier = youModifier.haveBegin + youLoc + youModOff
+        meIdx = @haveBegin + meModOff + meLoc
+        youModifier = youModifier.haveBegin + youModOff + youLoc
         if legLen < 0
           cb meIdx, youModifier + legLen, -legLen
         else  
@@ -216,10 +239,9 @@ class Modifier
         if legLen > 0
           if leg.done
             meLoc += legLen
-        else    
-          if not leg.done
-            meLoc -= legLen
-    meModOff + @doneBalance
+        else if not leg.done
+          meLoc -= legLen
+    null
 
 
 class ArrayDiff
@@ -333,13 +355,15 @@ class ArrayDiff
   getDeleteDelta: ->
     delta = ''
     count = 0
+    meModOff = @getModOffDiff 0, @modifiers.length
     for modifier in @modifiers by -1
-      modifier.getDeletes (delIdx, delLen) ->
-        debug 'getDeleteDelta: delIdx=%o, delLen=%o', delIdx, delLen
+      meModOff -= modifier.doneBalance
+      modifier.getDeletes meModOff, (pos, len) ->
+        debug 'getDeleteDelta: pos=%o, len=%o', pos, len
         delta += if count == 0 then '[-' else '|'
-        delta += delIdx
-        if delLen != 1
-          delta += '~' + delLen
+        delta += pos
+        if len != 1
+          delta += '~' + len
         ++count
     if count > 0
       delta += ']'
@@ -347,19 +371,41 @@ class ArrayDiff
     @debugModifiers 'getDeleteDelta done.' 
     delta    
 
+  getInsertDelta: ->
+    delta = ''
+    count = 0
+    meModOff = @getModOffDiff 0, @modifiers.length
+    debug 'getInsertDelta: meModOff=%o', meModOff
+    wishIdxer = @wishIdxer
+    for modifier in @modifiers by -1
+      meModOff -= modifier.doneBalance
+      modifier.getInserts meModOff, (havePos, wishPos, len) ->
+        debug 'getInsertDelta: havePos=%o, wishPos=%o', havePos, wishPos, len
+        delta += if count == 0 then '[+' else '|'
+        delta += havePos
+        for i in [0...len]
+          delta += ':' + wishIdxer.getItem wishPos + i
+        ++count
+    if count > 0
+      delta += ']'
+
+    @debugModifiers 'getInsertDelta done.' 
+    delta    
+
   getMoveDelta: ->
     delta = ''
     count = 0
     meModOff = 0
     for modifier in @modifiers
-      meModOff = modifier.getMoves meModOff, (srcIdx, dstIdx, moveLen) ->
-        debug 'getMoveDelta: srcIdx=%o, dstIdx=%o, moveLen=%o', srcIdx, dstIdx, moveLen
+      modifier.getMoves meModOff, (srcPos, dstPos, len) ->
+        debug 'getMoveDelta: srcPos=%o, dstPos=%o, len=%o', srcPos, dstPos, len
         delta += if count == 0 then '[!' else '|'
-        delta += srcIdx
-        if moveLen != 1
-          delta += '~' + moveLen
-        delta += '@' + dstIdx
+        delta += srcPos
+        if len != 1
+          delta += '~' + len
+        delta += '@' + dstPos
         ++count
+      meModOff += modifier.doneBalance  
     if count > 0
       delta += ']'
     @debugModifiers 'getMoveDelta done.' 
@@ -372,12 +418,13 @@ class ArrayDiff
       delta = ''
       delta += @getDeleteDelta()
       delta += @getMoveDelta()
+      delta += @getInsertDelta()
       delta
      
   debugModifiers: (title) ->
     debug title + ' modifiers:'
     for modifier in @modifiers
-      debug '  mdx=%o have=%o~%o wish=%o~%o, insertBalance=%o', modifier.mdx, modifier.haveBegin, modifier.haveLen, modifier.wishBegin, modifier.wishLen, modifier.insertBalance
+      debug '  mdx=%o have=%o~%o wish=%o~%o, restBalance=%o', modifier.mdx, modifier.haveBegin, modifier.haveLen, modifier.wishBegin, modifier.wishLen, modifier.restBalance
       for leg in modifier.legs
         debug '    %o', leg
       debug '  closeGap=%o', modifier.closeGap

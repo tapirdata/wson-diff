@@ -176,19 +176,59 @@ module.exports = [
     wish: 'jgdhiabecklf'.split ''
   }
   {
-    description: 'backward split delete'
-    have: 'abcdefghijkl'.split ''
-    wish: 'abicdefkl'.split ''
-  }
-  {
     description: 'reverse'
     have: 'abcdefghijkl'.split ''
     wish: 'lkjihgfedcba'.split ''
   }
   {
+    description: 'backward split delete'
+    have: 'abcdefghijkl'.split ''
+    wish: 'abicdefkl'.split ''
+  }
+  {
     description: 'forward split delete'
     have: 'abcdefghijkl'.split ''
     wish: 'abghijkle'.split ''
+  }
+  {
+    description: 'multi delete & move'
+    have: 'abcdefghijkl'.split ''
+    wish: 'ajlefbc'.split ''
+  }
+  {
+    description: 'single insert'
+    have: 'abcdefghijkl'.split ''
+    wish: 'abcdXefghijkl'.split ''
+  }
+  {
+    description: 'insert that needs quoting'
+    have: 'a,b,c,d,e,f,g,h,i,j,k,l'.split ','
+    wish: 'a,b,c,d,e,f,g,[],h,i,j,k,l'.split ','
+  }
+  {
+    description: 'insert array'
+    have: [['a'], ['c']]
+    wish: [['a'], ['b'], ['c']]
+  }
+  {
+    description: 'double block insert'
+    have: 'abcdefghijkl'.split ''
+    wish: 'abcdXYefghijkl'.split ''
+  }
+  {
+    description: 'double isolated insert'
+    have: 'abcdefghijkl'.split ''
+    wish: 'abcdXefYghijkl'.split ''
+  }
+  {
+    description: 'multiple insert'
+    have: 'abcdefghijkl'.split ''
+    wish: 'abcXYdefghiZUVjkl'.split ''
+  }
+  {
+    description: 'move & insert'
+    have: 'abcdefghijkl'.split ''
+    wish: 'aXYldfghbciZUVjek'.split ''
   }
 ]
 
