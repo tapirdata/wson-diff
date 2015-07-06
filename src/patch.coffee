@@ -3,6 +3,7 @@ debug = require('debug') 'wson-diff:patch'
 wson = require 'wson'
 
 errors = require './errors'
+ValueTarget = require './value-target'
 
 class PrePatchError extends errors.WsonDiffError
   name: 'PrePatchError'
@@ -32,124 +33,71 @@ SCALAR = 1
 OBJECT = 2
 ARRAY  = 3
 
-class Target
 
-  constructor: (up, key) ->
-    @up = up
-    @key = key
-    if up?
-      @value = up[key]
-    @_type = null
-    debug 'Target %o', @
+class State
 
-  reset: (source) ->
-    @up = source.up
-    @key = source.key
-    @value = source.value
-    @_type = source._type
+  constructor: (@str, @target, @stage, parent) ->
+    @parent = parent
+    @nextKey = null
+    @scopeType = @currentType = if parent then parent.getCurrentType() else null
+    @pendingSteps = 0
+    @haveSteps = 0
+    # debug 'State %o', @
 
-  getType: ->
-    type = @_type
+  getCurrentType: ->
+    type = @currentType
     if not type?
-      value = @value
-      @_type = type = if _.isArray value
+      value = @target.getCurrent()
+      type = if _.isArray value
         ARRAY
       else if _.isObject value
         OBJECT
       else
         SCALAR
+      @currentType = type  
+      if @haveSteps == 0
+        @scopeType = type
     type
 
-  enterPath: (key) ->
-    type = @getType()
-    debug 'enterPath value=%o type=%o, key=%o', @value, type, key
+  budgePendingSteps: ->
+    if @pendingSteps > 0
+      @target.budge @pendingSteps
+      @pendingSteps = 0
+
+  budgeNextKey: ->
+    if @nextKey
+      @target.budge @pendingSteps, @nextKey
+      @pendingSteps = 0
+      ++@haveSteps
+      @currentType = null
+      @nextKey = null
+    return  
+
+  enterPath: (skey) ->
+    @budgeNextKey()
+    type = @getCurrentType()
+    debug 'enterPath type=%o, skey=%o', type, skey
     switch type
       when ARRAY
-        if not reIndex.test key
-          throw new PrePatchError "non-numeric index #{key} for array #{@value}"
-        index = Number key
+        if not reIndex.test skey
+          throw new PrePatchError "non-numeric index #{skey} for array #{@target.getCurrent()}"
+        key = Number skey
       when OBJECT
-        index = key
+        key = skey
       else
-        throw new PrePatchError "can't index scalar #{@value}"
-    @up = @up[@key]
-    @value = @up[index]
-    @key = index
-    @_type = null
+        throw new PrePatchError "can't index scalar #{@target.getCurrent()}"
+    @nextKey = key
     return
-
-  assignValue: (value) ->
-    debug 'assignValue @up=%o, @key=%o value=%o', @up, @key, value
-    @up[@key] = @value = value
-    @type = null
-    debug 'assignValue ok'
-    return
-
-  assignValueNext: (value) ->
-    debug 'assignValueNext @up=%o, @key=%o value=%o', @up, @key, value
-    @up[++@key] = @value = value
-    @type = null
-    debug 'assignValueNext ok'
-    return
-
-  deleteKey: (key) ->
-    debug 'deleteKey @value=%o, value=%o', @value, key
-    type = @getType()
-    switch type
-      when ARRAY
-        m = reRange.exec key
-        if not m?
-          throw new PrePatchError "ill-formed range '#{key}'"
-        index = Number m[1]
-        len = if m[3]? then Number m[3] else 1
-        @value.splice index, len
-      when OBJECT
-        delete @value[key]
-      else
-        throw new PrePatchError "can't delete from scalar #{@value}"
-    return
-
-  startInsert: (key) ->
-    if not reIndex.test key
-      throw new PrePatchError "non-numeric index #{key} for array #{@value}"
-    @insertKey = key
-    @insertValues = []
-    return
-
-  addInsert: (value) ->
-    @insertValues.push value
-
-  commitInsert: ->
-    debug 'commitInsert value=%o, insertKey=%o, insertValues=%o', @value, @insertKey, @insertValues
-    @value.splice.apply @value, [@insertKey, 0].concat @insertValues
-    return
-
-  moveKey: (key) ->
-    debug 'moveKey @value=%o, value=%o', @value, key
-    m = reMove.exec key
-    if not m?
-      throw new PrePatchError "ill-formed move '#{key}'"
-    srcKey = Number m[1]
-    len = if m[3]? then Number m[3] else 1
-    dstKey = Number m[4]
-    chunk = @value.splice srcKey, len
-    debug 'moveKey srcKey=%o, dstKey=%o, len=%o, @value=%o, chunk=%o', srcKey, dstKey, len, @value, chunk
-    @value.splice.apply @value, [dstKey, 0].concat chunk
-    # debug 'moveKey @value=%o, arguments=%o', @value, [@dstKey, 0].concat chunk
-    return
-
-
-class State
-
-  constructor: (@str, @baseTarget, @stage, @parent) ->
-    @target = new Target()
-    @resetPath()
-    debug 'State %o', @
 
   resetPath: ->
-    @target.reset @baseTarget
+    @pendingSteps = @haveSteps
+    @haveSteps = 0
+    @currentType = @scopeType
+    @nextKey = null
+    return
 
   push: (stage, rawNext) ->
+    @budgeNextKey()
     state = new State @str, @target, stage, @
     state.rawNext = rawNext
     state
@@ -157,24 +105,60 @@ class State
   pop: (stage, rawNext) ->
     if not @parent?
       throw new PrePatchError()
+    debug 'pop @haveSteps=%o @parent=%o', @haveSteps, @parent
+    @parent.haveSteps += @haveSteps
     @parent
 
   startScope: ->
     @stage = stages.scopeHas
     @push stages.pathBegin, true
 
+  startAssign: (value) ->
+    @assignValues = [value]
+
+  addAssign: (value) ->
+    @assignValues.push value
+    
+  commitAssign: ->
+    debug 'commitAssign nextKey=%o assignValues=%o', @nextKey, @assignValues
+    if @assignValues?
+      @budgePendingSteps()
+      @target.assign @nextKey, @assignValues
+      @assignValues = null
+    return
+
+  deleteKey: (skey) ->
+    debug 'deleteKey skey=%o', skey
+    @budgeNextKey()
+    type = @getCurrentType()
+    switch type
+      when ARRAY
+        m = reRange.exec skey
+        if not m?
+          throw new PrePatchError "ill-formed range '#{skey}'"
+        key = Number m[1]
+        len = if m[3]? then Number m[3] else 1
+      when OBJECT
+        key = skey
+        len = 1
+      else
+        throw new PrePatchError "can't delete from scalar #{@value}"
+    @target.delete key, len
+    return
+
   startModify: ->
     c = @str[++@pos]
     debug 'startModify c=%o', c
+    @budgeNextKey()
     switch c
       when '-'
         @stage = stages.deleteBegin
       when '+'
-        if @target.getType() != ARRAY
+        if @getCurrentType() != ARRAY
           throw new PrePatchError()
         @stage = stages.insertBegin
       when '!'
-        if @target.getType() != ARRAY
+        if @getCurrentType() != ARRAY
           throw new PrePatchError()
         @stage = stages.moveBegin
       else
@@ -183,15 +167,43 @@ class State
     @skipNext = 1
     @
 
+  startInsert: (skey) ->
+    if not reIndex.test skey
+      throw new PrePatchError "non-numeric index #{skey} for array #{@target.getCurrent()}"
+    @insertKey = Number skey
+    @insertValues = []
+    return
+
+  addInsert: (value) ->
+    @insertValues.push value
+
+  commitInsert: ->
+    debug 'commitInsert insertKey=%o, insertValues=%o', @insertKey, @insertValues
+    @target.insert @insertKey, @insertValues
+    return
+
+  moveKey: (skey) ->
+    debug 'moveKey skey=%o', skey
+    m = reMove.exec skey
+    if not m?
+      throw new PrePatchError "ill-formed move '#{skey}'"
+    srcKey = Number m[1]
+    len = if m[3]? then Number m[3] else 1
+    dstKey = Number m[4]
+
+    debug 'moveKey srcKey=%o, dstKey=%o, len=%o', srcKey, dstKey, len
+    @target.move srcKey, dstKey, len
+    return
+
 
 stages =
   pathBegin:
     value: (value) ->
-      @target.enterPath value
+      @enterPath value
       @stage = stages.pathHas
       @
     '#': (value) ->
-      @target.enterPath ''
+      @enterPath ''
       @stage = stages.pathHas
       @
     ':': ->
@@ -206,11 +218,11 @@ stages =
       @pop()
   pathNext:
     value: (value) ->
-      @target.enterPath value
+      @enterPath value
       @stage = stages.pathHas
       @
     '#': (value) ->
-      @target.enterPath ''
+      @enterPath ''
       @stage = stages.pathHas
       @
   pathHas:
@@ -227,49 +239,56 @@ stages =
       @startModify()
   scopeAssign:
     value: (value) ->
-      @target.assignValue value
+      @startAssign value
       @stage = stages.scopeHas
       @
   scopeAssignNext:
     value: (value) ->
-      @target.assignValueNext value
+      @addAssign value
       @stage = stages.scopeHas
       @
   scopeHas:
     value: (value) ->
-      @target.enterPath value
+      @commitAssign()
+      @enterPath value
       @stage = stages.pathHas
       @
     '#': (value) ->
-      @target.enterPath ''
+      @commitAssign()
+      @enterPath ''
       @stage = stages.pathHas
       @
     ':': ->
-      if not _.isArray @target.up
+      if @getCurrentType() != ARRAY
         throw new PrePatchError()
       @rawNext = false
       @stage = stages.scopeAssignNext
       @
     '|': ->
+      @commitAssign()
       @resetPath()
       @stage = stages.pathBegin
       @
     '{': ->
+      @commitAssign()
       @startScope()
     '[': ->
+      @commitAssign()
       @startModify()
     '}': ->
+      @commitAssign()
       @pop()
     end: ->
+      @commitAssign()
       if @parent?
         throw new PrePatchError()
   deleteBegin:
     value: (value) ->
-      @target.deleteKey value
+      @deleteKey value
       @stage = stages.deleteHas
       @
     '#': ->
-      @target.deleteKey ''
+      @deleteKey ''
       @stage = stages.deleteHas
       @
   deleteHas:
@@ -281,16 +300,16 @@ stages =
       @
   deleteNext:
     value: (value) ->
-      @target.deleteKey value
+      @deleteKey value
       @stage = stages.deleteHas
       @
     '#': ->
-      @target.deleteKey ''
+      @deleteKey ''
       @stage = stages.deleteHas
       @
   insertBegin:
     value: (value) ->
-      @target.startInsert value
+      @startInsert value
       @stage = stages.insertHasKey
       @
   insertHasKey:
@@ -300,7 +319,7 @@ stages =
       @
   insertHasColon:
     value: (value) ->
-      @target.addInsert value
+      @addInsert value
       @stage = stages.insertHasValue
       @
   insertHasValue:
@@ -309,16 +328,16 @@ stages =
       @rawNext = false
       @
     '|': ->
-      @target.commitInsert()
+      @commitInsert()
       @stage = stages.insertBegin
       @
     ']': ->
-      @target.commitInsert()
+      @commitInsert()
       @stage = stages.scopeHas
       @
   moveBegin:
     value: (value) ->
-      @target.moveKey value
+      @moveKey value
       @stage = stages.moveHas
       @
   moveHas:
@@ -330,7 +349,7 @@ stages =
       @
   moveNext:
     value: (value) ->
-      @target.moveKey value
+      @moveKey value
       @stage = stages.moveHas
       @
 
@@ -344,13 +363,14 @@ class Patcher
 
   constructor: (@wsonDiff) ->
 
-  patch: (target, str) ->
+  patchTarget: (target, str) ->
     debug 'patch: target=%o, str=%o', target, str
     try
       if str[0] != '|'
-        return @wsonDiff.WSON.parse str
+        value = @wsonDiff.WSON.parse str
+        target.assign null, [value]
+        return
 
-      target = new Target _: target, '_'
       state = new State str, target, stages.pathBegin
       state.pos = 1
 
@@ -383,8 +403,7 @@ class Patcher
       if not handler
         throw new PatchError str
       handler.call state
-
-      return target.up._
+      return
 
     catch error
       if error instanceof PrePatchError
@@ -395,6 +414,10 @@ class Patcher
         throw error
         # throw new PatchError str, state.pos, error
 
+  patch: (value, str) ->
+    target = new ValueTarget value
+    @patchTarget target, str
+    target.getRoot()
 
 exports.Patcher = Patcher
 exports.PatchError = PatchError

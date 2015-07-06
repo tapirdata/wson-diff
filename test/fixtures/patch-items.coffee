@@ -111,6 +111,11 @@ module.exports = [
     wish: ['a', 'B', 'c']
   }
   {
+    have: ['a', 'b', 'c']
+    delta: '|1:B:C'
+    wish: ['a', 'B', 'C']
+  }
+  {
     have: ['a', ['b'], 'c']
     delta: '|1|0:B'
     wish: ['a', ['B'], 'c']
