@@ -12,7 +12,12 @@ class ValueTarget extends Target
     @current = @root
     @stack = []
 
-  getCurrent: -> @current
+  get: (outSteps) ->
+    if not outSteps? or outSteps <= 0
+      @current
+    else
+      stack = @stack
+      stack[stack.length - outSteps]
 
   budge: (outSteps, key) ->
     debug 'budge: outSteps=%o, key=%o', outSteps, key

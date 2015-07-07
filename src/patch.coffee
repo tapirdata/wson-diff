@@ -47,7 +47,7 @@ class State
   getCurrentType: ->
     type = @currentType
     if not type?
-      value = @target.getCurrent()
+      value = @target.get 0
       type = if _.isArray value
         ARRAY
       else if _.isObject value
@@ -80,12 +80,12 @@ class State
     switch type
       when ARRAY
         if not reIndex.test skey
-          throw new PrePatchError "non-numeric index #{skey} for array #{@target.getCurrent()}"
+          throw new PrePatchError "non-numeric index #{skey} for array #{@target.get()}"
         key = Number skey
       when OBJECT
         key = skey
       else
-        throw new PrePatchError "can't index scalar #{@target.getCurrent()}"
+        throw new PrePatchError "can't index scalar #{@target.get()}"
     @nextKey = key
     return
 
@@ -142,7 +142,7 @@ class State
         key = skey
         len = 1
       else
-        throw new PrePatchError "can't delete from scalar #{@value}"
+        throw new PrePatchError "can't delete from scalar #{@target.get()}"
     @target.delete key, len
     return
 
@@ -169,7 +169,7 @@ class State
 
   startInsert: (skey) ->
     if not reIndex.test skey
-      throw new PrePatchError "non-numeric index #{skey} for array #{@target.getCurrent()}"
+      throw new PrePatchError "non-numeric index #{skey} for array #{@target.get()}"
     @insertKey = Number skey
     @insertValues = []
     return
@@ -374,7 +374,7 @@ class Patcher
       state = new State str, target, stages.pathBegin
       state.pos = 1
 
-      @wsonDiff.WSON.parsePartial str, [true, 1], (isValue, value, nextPos) ->
+      @wsonDiff.WSON.parsePartial str, howNext: [true, 1], cb: (isValue, value, nextPos) ->
         stage = state.stage
         debug 'patch: stage=%o, isValue=%o, value=%o, nextPos=%o', stage.name, isValue, value, nextPos
         if isValue

@@ -2,7 +2,7 @@ debug = require('debug') 'wson-diff:target'
 
 class Target
 
-  getCurrent: ->  
+  get: (outSteps) ->
 
   budge: (outSteps, key) -> 
 
