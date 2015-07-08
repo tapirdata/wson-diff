@@ -161,24 +161,29 @@ module.exports = [
     wish: 'abciefghdjkl'.split ''
   }
   {
-    description: 'block exchange'
+    description: 'block exchange move'
     have: 'abcdefghijkl'.split ''
     wish: 'abijkfghcdel'.split ''
   }
   {
-    description: 'multi exchange #1'
+    description: 'multi exchange move #1'
     have: 'abcdefghijkl'.split ''
     wish: 'abefjgckldhi'.split ''
   }
   {
-    description: 'multi exchange #2'
+    description: 'multi exchange move #2'
     have: 'abcdefghijkl'.split ''
     wish: 'jgdhiabecklf'.split ''
   }
   {
-    description: 'reverse'
+    description: 'reverse move'
     have: 'abcdefghijkl'.split ''
     wish: 'lkjihgfedcba'.split ''
+  }
+  {
+    description: 'move with duplicates'
+    have: 'abcabcde'.split ''
+    wish: 'ababdcec'.split ''
   }
   {
     description: 'backward split delete'
@@ -240,5 +245,65 @@ module.exports = [
     have: 'abcdefghijkl'.split ''
     wish: 'abcdeFGhijkl'.split ''
   }
+  {
+    description: 'move & replace'
+    have: 'abcdefghijkl'.split ''
+    wish: 'abgcdeFHijkl'.split ''
+  }
+  {
+    description: 'delete, move & replace'
+    have: 'abcdefghijkl'.split ''
+    wish: 'abjKdefhIl'.split ''
+  }
+  {
+    description: 'move, insert & replace'
+    have: 'abcdefghijkl'.split ''
+    wish: 'jkaeFgbcDhilM'.split ''
+  }
+  {
+    description: 'replace missing duplicates'
+    have: 'abcabcde'.split ''
+    wish: 'ababdccec'.split ''
+  }
+  {
+    description: 'delete superfluous duplicates'
+    have: 'abcabcde'.split ''
+    wish: 'ababdce'.split ''
+  }
+  {
+    description: 'total replace'
+    have: 'abcdefghijkl'.split ''
+    wish: 'ABCDEFGHIJKL'.split ''
+  }
+  {
+    description: 'array of objects no change'
+    have: [{a: 3}, {b: 4}, {c: 5}]
+    wish: [{a: 3}, {b: 4}, {c: 5}]
+  }
+  {
+    description: 'array of objects move'
+    have: [{a: 3}, {b: 4}, {c: 5}]
+    wish: [{a: 3}, {c: 5}, {b: 4}]
+  }
+  {
+    description: 'array of objects insert'
+    have: [{a: 3}, {b: 4}, {c: 5}]
+    wish: [{a: 3}, {b: 4}, {x: 11}, {c: 5}]
+  }
+  {
+    description: 'array of objects replace'
+    have: [{a: 3}, {b: 4}, {c: 5}]
+    wish: [{a: 3}, {b: 14}, {c: 5}]
+  }
+  {
+    description: 'array of objects multi replace'
+    have: [{a: 3}, {b: 4}, {c: 5}]
+    wish: [{a: 13}, {b: 14}, {c: 15}]
+  }
+  # {
+  #   description: 'add circular reference'
+  #   have: do -> x = foo: a: {y: 3}; x
+  #   wish: do -> x = foo: a: {y: 3}; x.foo.a.x = x; x
+  # }
 ]
 

@@ -136,15 +136,17 @@ class Modifier
         break
 
     @legs = legs
+    return
         
 
   getDeletes: (meModOff, cb) ->
+    debug 'getMoves: mdx=%o meModOff=%o', @mdx, meModOff
     restBalance = @restBalance
     if restBalance <= 0
       return
     haveLoc = @haveLen + @doneBalance - @closeGap
     for leg in @legs by -1
-      debug 'getDeletes: meModOff=%o restBalance=%o haveLoc=%o leg=%o', meModOff, restBalance, haveLoc, leg
+      debug 'getDeletes: restBalance=%o haveLoc=%o leg=%o', restBalance, haveLoc, leg
       legLen = leg.len
       if legLen > 0
         if leg.done
@@ -160,17 +162,17 @@ class Modifier
             break
       haveLoc -= leg.gap
     @restBalance = restBalance    
-    return null      
+    return
 
   getInserts: (meModOff, cb) ->
-    debug 'getInserts: mdx=%o have=%o~%o wish=%o~%o', @mdx, @haveBegin, @haveLen, @wishBegin, @wishLen
+    debug 'getInserts: mdx=%o meModOff=%o have=%o~%o wish=%o~%o', @mdx, meModOff, @haveBegin, @haveLen, @wishBegin, @wishLen
     restBalance = @restBalance
     if restBalance >= 0
       return
     haveLoc = @haveLen + @doneBalance - @closeGap
     wishLoc = @wishLen - @closeGap
     for leg in @legs by -1
-      debug 'getInserts:   meModOff=%o restBalance=%o haveLoc=%o wishLoc=%o leg=%o', meModOff, restBalance, haveLoc, wishLoc, leg
+      debug 'getInserts:   restBalance=%o haveLoc=%o wishLoc=%o leg=%o', restBalance, haveLoc, wishLoc, leg
       legLen = leg.len
       if legLen > 0
         if leg.done
@@ -188,11 +190,11 @@ class Modifier
       haveLoc -= leg.gap
       wishLoc -= leg.gap
     @restBalance = restBalance    
-    return null      
+    return
 
 
   getPatches: (meModOff, cb) ->
-    debug 'getPatches: mdx=%o have=%o~%o wish=%o~%o', @mdx, @haveBegin, @haveLen, @wishBegin, @wishLen
+    debug 'getPatches: mdx=%o meModOff=%o have=%o~%o wish=%o~%o', @mdx, meModOff, @haveBegin, @haveLen, @wishBegin, @wishLen
     haveLoc = 0
     wishLoc = 0
     for leg in @legs
@@ -211,6 +213,7 @@ class Modifier
     gap = @closeGap
     if gap > 0
       cb @haveBegin + meModOff + haveLoc, @wishBegin + wishLoc, gap
+    return  
 
 
   putMove: (legId) ->
@@ -234,7 +237,7 @@ class Modifier
 
 
   getMoves: (meModOff, cb) ->
-    debug 'getMoves: mdx=%o', @mdx
+    debug 'getMoves: mdx=%o meModOff=%o', @mdx, meModOff
     ad = @ad
     meLoc = 0
     for leg in @legs
@@ -263,7 +266,7 @@ class Modifier
             meLoc += legLen
         else if not leg.done
           meLoc -= legLen
-    null
+    return
 
 
 class ArrayDiff
@@ -277,11 +280,10 @@ class ArrayDiff
       @setupLegs()
 
   setupIdxers: ->
-    wsonDiff = @state.wsonDiff
-    haveIdxer = new Idxer wsonDiff, @have
-    wishIdxer = new Idxer wsonDiff, @wish, haveIdxer.allString
+    haveIdxer = new Idxer @state, @have
+    wishIdxer = new Idxer @state, @wish, haveIdxer.allString
     if haveIdxer.allString and not wishIdxer.allString
-      haveIdxer = new Idxer wsonDiff, @have, false
+      haveIdxer = new Idxer @state, @have, false
     # debug 'setupIdxers: have keys=%o allString=%o', haveIdxer.keys, haveIdxer.allString
     # debug 'setupIdxers: wish keys=%o allString=%o', wishIdxer.keys, wishIdxer.allString
     @haveIdxer = haveIdxer
@@ -315,6 +317,7 @@ class ArrayDiff
         ++wishOfs
     @modifiers = modifiers
     @wishKeyUses = wishKeyUses
+    return
 
   setupLegs: ->
     # debug 'setupLegs: @wishKeyUses=%o', @wishKeyUses
@@ -358,6 +361,7 @@ class ArrayDiff
     for modifier in modifiers
       modifier.setupLegs()
     @debugModifiers 'setupLegs done.'
+    return
 
 
   getModOffDiff: (fromMdx, toMdx) ->
@@ -391,7 +395,7 @@ class ArrayDiff
     if count > 0
       delta += ']'
 
-    @debugModifiers 'getDeleteDelta done.' 
+    # @debugModifiers 'getDeleteDelta done.' 
     delta    
 
   getInsertDelta: ->
@@ -412,7 +416,7 @@ class ArrayDiff
     if count > 0
       delta += ']'
 
-    @debugModifiers 'getInsertDelta done.' 
+    # @debugModifiers 'getInsertDelta done.' 
     delta    
 
   getPatchDelta: ->
@@ -423,7 +427,7 @@ class ArrayDiff
     wish = @wish
     state = @state
     debug 'getPatchDelta: meModOff=%o', meModOff
-    for modifier in @modifiers by -1
+    for modifier in @modifiers
       modifier.getPatches meModOff, (havePos, wishPos, len) ->
         debug 'getPatchDelta: havePos=%o, wishPos=%o, len=%o', havePos, wishPos, len
         delta += if count == 0 then '{' else '|'
@@ -462,7 +466,7 @@ class ArrayDiff
       meModOff += modifier.doneBalance  
     if count > 0
       delta += ']'
-    @debugModifiers 'getMoveDelta done.' 
+    # @debugModifiers 'getMoveDelta done.' 
     delta
 
   getDelta: ->
@@ -488,16 +492,28 @@ class ArrayDiff
 class State
 
   constructor: (@wsonDiff) ->
+    @wishStack = []
+
+  stringify: (val) ->
+    debug 'stringify val=%o wishStack=%o', val, @wishStack
+    wishStack = @wishStack
+    @wsonDiff.WSON.stringify val, haverefCb: (backVal) ->
+      debug 'stringify:   backVal=%o', backVal
+      for wish, idx in wishStack
+        debug 'stringify:     wish=%o, idx=%o', wish, idx
+        if wish == backVal
+          debug 'stringify:   found.'
+          return wishStack.length - idx - 1
+      null
 
   getPlainDelta: (have, wish, isRoot) ->
-    WSON = @wsonDiff.WSON
-    delta = WSON.stringify wish
+    delta = @stringify wish
     if not isRoot
       delta = ':' + delta
     delta
 
   getObjectDelta: (have, wish, isRoot) ->
-    WSON = @wsonDiff.WSON
+    @wishStack.push wish
     delta = ''
     debug 'getObjectDelta(have=%o, wish=%o, isRoot=%o)', have, wish, isRoot
 
@@ -508,7 +524,7 @@ class State
       if not _.has wish, key
         if delCount > 0
           delDelta += '|'
-        delDelta += WSON.stringify key
+        delDelta += @stringify key
         ++delCount
     if delCount > 0
       delta += '[-' + delDelta + ']'
@@ -522,7 +538,7 @@ class State
       if keyDelta?
         if subCount > 0
           subDelta += '|'
-        subDelta += WSON.stringify(key) + keyDelta
+        subDelta += @stringify(key) + keyDelta
         ++subCount
     debug 'getObjectDelta: subDelta=%o, subCount=%o', subDelta, subCount
     if subCount > 0
@@ -532,6 +548,7 @@ class State
         else if delCount == 0
           subDelta = '|' + subDelta
       delta += subDelta
+    @wishStack.pop()
     if delta.length
       if isRoot
         delta = '|' + delta
@@ -539,8 +556,10 @@ class State
     null
 
   getArrayDelta: (have, wish, isRoot) ->
+    @wishStack.push wish
     ad = new ArrayDiff @, have, wish
     delta = ad.getDelta()
+    @wishStack.pop()
     if delta?
       if isRoot
         delta = '|' + delta

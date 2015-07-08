@@ -2,7 +2,7 @@ _ = require 'lodash'
 
 class Idxer 
   
-  constructor: (@wsonDiff, vals, allString=true) ->
+  constructor: (@state, vals, allString=true) ->
     # console.log 'Idxer allString=%s', allString 
     if allString
       # uses = {}
@@ -16,11 +16,10 @@ class Idxer
         # use.push idx
       keys = vals 
     if not allString    
-      WSON = @wsonDiff.WSON
       # uses = {}
       keys = new Array vals.length
       for val, idx in vals
-        key = WSON.stringify val
+        key = @state.stringify val
         keys[idx] = key
         # use = uses[key]
         # if not use?
@@ -32,7 +31,7 @@ class Idxer
   getItem: (idx) ->
     key = @keys[idx]
     if @allString
-      @wsonDiff.WSON.escape key
+      @state.stringify key
     else
       key
 

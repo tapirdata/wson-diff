@@ -65,7 +65,7 @@ class State
       @pendingSteps = 0
 
   budgeNextKey: ->
-    if @nextKey
+    if @nextKey?
       @target.budge @pendingSteps, @nextKey
       @pendingSteps = 0
       ++@haveSteps

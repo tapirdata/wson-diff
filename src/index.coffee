@@ -10,7 +10,7 @@ diff = require './diff'
 class WsonDiff
 
   constructor: ->
-    @WSON = wson(useAddon: true)
+    @WSON = wson(useAddon: false)
 
   createPatcher: ->
     new patch.Patcher @
