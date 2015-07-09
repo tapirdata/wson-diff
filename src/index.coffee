@@ -14,13 +14,16 @@ class WsonDiff
     WSON = options.WSON
     if not WSON?  
       WSON = wson options.wsonOptions
-    @WSON = WSON  
+    @WSON = WSON
+    @options = options
 
-  createPatcher: ->
-    new patch.Patcher @
+  createPatcher: (options) ->
+    options or= {}
+    new patch.Patcher @, options
 
-  createDiffer: ->
-    new diff.Differ @
+  createDiffer: (options) ->
+    options or= {}
+    new diff.Differ @, options
 
 
 factory = (options) ->

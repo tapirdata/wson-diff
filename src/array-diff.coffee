@@ -272,6 +272,7 @@ class ArrayDiff
   constructor: (@state, have, wish) ->
     @have = have
     @wish = wish
+    @maxDiffLenGetter = @state.differ.maxDiffLenGetter
     @setupIdxers()
     @setupModifiers()
     if @modifiers.length > 0
@@ -295,7 +296,7 @@ class ArrayDiff
     wishKeyUses = {}
 
     ad = @
-    d = mdiff(haveIdxer.keys, wishIdxer.keys).scanDiff (haveBegin, haveEnd, wishBegin, wishEnd) ->
+    scanCb = (haveBegin, haveEnd, wishBegin, wishEnd) ->
       debug 'setupModifiers: %o..%o %o..%o', haveBegin, haveEnd, wishBegin, wishEnd
       haveLen = haveEnd - haveBegin
       wishLen = wishEnd - wishBegin
@@ -313,6 +314,11 @@ class ArrayDiff
         else
           wishKeyUses[wishKey] = [useTo]
         ++wishOfs
+    
+    maxDiffLen = @maxDiffLenGetter?(@wish)
+
+    diffLen = mdiff(haveIdxer.keys, wishIdxer.keys).scanDiff scanCb, maxDiffLen
+    @aborted = not diffLen?
     @modifiers = modifiers
     @wishKeyUses = wishKeyUses
     return

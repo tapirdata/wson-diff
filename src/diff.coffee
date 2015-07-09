@@ -5,13 +5,13 @@ ArrayDiff = require './array-diff'
 
 class State
 
-  constructor: (@wsonDiff) ->
+  constructor: (@differ) ->
     @wishStack = []
 
   stringify: (val) ->
     debug 'stringify val=%o wishStack=%o', val, @wishStack
     wishStack = @wishStack
-    @wsonDiff.WSON.stringify val, haverefCb: (backVal) ->
+    @differ.wsonDiff.WSON.stringify val, haverefCb: (backVal) ->
       debug 'stringify:   backVal=%o', backVal
       for wish, idx in wishStack
         debug 'stringify:     wish=%o, idx=%o', wish, idx
@@ -21,6 +21,7 @@ class State
       null
 
   getPlainDelta: (have, wish, isRoot) ->
+    debug 'getPlainDelta(have=%o, wish=%o, isRoot=%o)', have, wish, isRoot
     delta = @stringify wish
     if not isRoot
       delta = ':' + delta
@@ -72,11 +73,14 @@ class State
   getArrayDelta: (have, wish, isRoot) ->
     @wishStack.push wish
     ad = new ArrayDiff @, have, wish
-    delta = ad.getDelta()
+    if not ad.aborted
+      delta = ad.getDelta()
+      if delta?
+        if isRoot
+          delta = '|' + delta
     @wishStack.pop()
-    if delta?
-      if isRoot
-        delta = '|' + delta
+    if ad.aborted
+      delta = @getPlainDelta have, wish, isRoot
     delta
 
 
@@ -99,10 +103,12 @@ class State
 
 class Differ
 
-  constructor: (@wsonDiff) ->
+  constructor: (@wsonDiff, options) ->
+    options or= {}
+    @maxDiffLenGetter = options.maxDiffLenGetter or @wsonDiff.options.maxDiffLenGetter
 
   diff: (src, dst) ->
-    state = new State @wsonDiff
+    state = new State @
     state.getDelta src, dst, true
 
 

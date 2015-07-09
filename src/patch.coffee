@@ -361,7 +361,7 @@ do ->
 
 class Patcher
 
-  constructor: (@wsonDiff) ->
+  constructor: (@wsonDiff, options) ->
 
   patchTarget: (target, str) ->
     debug 'patch: target=%o, str=%o', target, str
@@ -421,6 +421,7 @@ class Patcher
     target = new ValueTarget value
     @patchTarget target, str
     target.getRoot()
+
 
 exports.Patcher = Patcher
 exports.PatchError = PatchError
