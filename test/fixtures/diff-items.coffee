@@ -304,11 +304,13 @@ module.exports = [
     description: 'add circular reference'
     have: do -> x = foo: a: {y: 3}; x
     wish: do -> x = foo: a: {y: 3}; x.foo.a.x = x; x
+    delta: '|foo|a|x:|2'
   }
   {
     description: 'add circular reference'
     have: do -> x = foo: a: {y: 3}; x
     wish: do -> x = foo: a: {y: 3}; x.foo.a.foo = x.foo; x
+    delta: '|foo|a|foo:|1'
   }
 ]
 

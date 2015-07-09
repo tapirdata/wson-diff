@@ -9,8 +9,12 @@ diff = require './diff'
 
 class WsonDiff
 
-  constructor: ->
-    @WSON = wson(useAddon: false)
+  constructor: (options) ->
+    options or= {}
+    WSON = options.WSON
+    if not WSON?  
+      WSON = wson options.wsonOptions
+    @WSON = WSON  
 
   createPatcher: ->
     new patch.Patcher @
