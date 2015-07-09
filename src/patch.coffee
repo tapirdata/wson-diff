@@ -374,28 +374,31 @@ class Patcher
       state = new State str, target, stages.pathBegin
       state.pos = 1
 
-      @wsonDiff.WSON.parsePartial str, howNext: [true, 1], cb: (isValue, value, nextPos) ->
-        stage = state.stage
-        debug 'patch: stage=%o, isValue=%o, value=%o, nextPos=%o', stage.name, isValue, value, nextPos
-        if isValue
-          handler = stage.value
-        else
-          handler = stage[value]
-        if not handler
-          handler = stage.default
-        if not handler
-          throw new PatchError str, state.pos
-        debug 'patch: handler=%o', handler
-        state.rawNext = true
-        state.skipNext = 0
-        state = handler.call state, value, nextPos
-        debug 'patch: rawNext=%o, skipNext=%o, stage=%o', state.rawNext, state.skipNext, state.stage.name
-        state.pos = nextPos
-        if state.skipNext > 0
-          state.pos += state.skipNext
-          return [state.rawNext, state.skipNext]
-        else
-          return state.rawNext
+      @wsonDiff.WSON.parsePartial str,
+        howNext: [true, 1]
+        cb: (isValue, value, nextPos) ->
+          stage = state.stage
+          debug 'patch: stage=%o, isValue=%o, value=%o, nextPos=%o', stage.name, isValue, value, nextPos
+          if isValue
+            handler = stage.value
+          else
+            handler = stage[value]
+          if not handler
+            handler = stage.default
+          if not handler
+            throw new PatchError str, state.pos
+          debug 'patch: handler=%o', handler
+          state.rawNext = true
+          state.skipNext = 0
+          state = handler.call state, value, nextPos
+          debug 'patch: rawNext=%o, skipNext=%o, stage=%o', state.rawNext, state.skipNext, state.stage.name
+          state.pos = nextPos
+          if state.skipNext > 0
+            state.pos += state.skipNext
+            return [state.rawNext, state.skipNext]
+          else
+            return state.rawNext
+        backrefCb: (refIdx) -> target.get refIdx
 
       debug 'patch: done: stage=%o', state.stage.name
       state.pos = str.length

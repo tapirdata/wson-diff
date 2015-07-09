@@ -300,10 +300,15 @@ module.exports = [
     have: [{a: 3}, {b: 4}, {c: 5}]
     wish: [{a: 13}, {b: 14}, {c: 15}]
   }
-  # {
-  #   description: 'add circular reference'
-  #   have: do -> x = foo: a: {y: 3}; x
-  #   wish: do -> x = foo: a: {y: 3}; x.foo.a.x = x; x
-  # }
+  {
+    description: 'add circular reference'
+    have: do -> x = foo: a: {y: 3}; x
+    wish: do -> x = foo: a: {y: 3}; x.foo.a.x = x; x
+  }
+  {
+    description: 'add circular reference'
+    have: do -> x = foo: a: {y: 3}; x
+    wish: do -> x = foo: a: {y: 3}; x.foo.a.foo = x.foo; x
+  }
 ]
 
