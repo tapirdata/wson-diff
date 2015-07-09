@@ -4,13 +4,13 @@ class Target
 
   get: (outSteps) ->
 
-  budge: (outSteps, key) -> 
+  budge: (outSteps, key) ->
 
-  assign: (key, values) -> 
+  assign: (key, values) ->
 
-  delete: (key, len) -> 
+  delete: (key, len) ->
 
-  insert: (key, values) -> 
+  insert: (key, values) ->
 
   move: (srcKey, dstKey, len) ->
 

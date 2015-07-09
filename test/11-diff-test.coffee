@@ -33,8 +33,8 @@ for setup in require './fixtures/setups'
     describe 'diff', ->
       for item in items
         do (item) ->
-          differ = wDiff.createDiffer()
-          patcher = wDiff.createPatcher()
+          differ = wDiff.createDiffer item.diffOptions
+          patcher = wDiff.createPatcher item.patchOptions
           delta = differ.diff item.have, item.wish
           debug 'diff: have=%o, wish=%o, delta=%o', item.have, item.wish, delta
           describe item.description, ->
@@ -43,11 +43,14 @@ for setup in require './fixtures/setups'
                 expect(delta).to.be.equal item.delta
             if delta? and delta != '|'
               if not item.noPatch
-                have = _.cloneDeep item.have
+                if item.wsonClone
+                  have = wDiff.WSON.parse wDiff.WSON.stringify item.have # do a real deep clone (with constructors)
+                else
+                  have = _.cloneDeep item.have
                 got = patcher.patch have, delta
                 it "should patch #{saveRepr item.have} with '#{delta}' to #{saveRepr item.wish}.", ->
                   expect(got).to.be.deep.equal item.wish
-            else      
+            else
               it "should get null delta for no change only", ->
                 expect(item.have).to.be.deep.equal item.wish
 

@@ -32,9 +32,14 @@ class State
     delta = ''
     debug 'getObjectDelta(have=%o, wish=%o, isRoot=%o)', have, wish, isRoot
 
+    diffKeys = null
+    if have.constructor? and have.constructor != Object
+      connector = @differ.wsonDiff.WSON.connectorOfValue have
+      diffKeys = connector?.diffKeys
+
     delDelta = ''
     delCount = 0
-    haveKeys = _(have).keys().sort().value()
+    haveKeys = diffKeys or _(have).keys().sort().value()
     for key in haveKeys
       if not _.has wish, key
         if delCount > 0
@@ -46,7 +51,7 @@ class State
 
     subDelta = ''
     subCount = 0
-    wishKeys = _(wish).keys().sort().value()
+    wishKeys = diffKeys or _(wish).keys().sort().value()
     for key in wishKeys
       keyDelta = @getDelta have[key], wish[key]
       debug 'getObjectDelta: key=%o, keyDelta=%o', key, keyDelta
@@ -105,7 +110,7 @@ class Differ
 
   constructor: (@wsonDiff, options) ->
     options or= {}
-    @maxDiffLenGetter = options.maxDiffLenGetter or @wsonDiff.options.maxDiffLenGetter
+    @arrayDiffLimitGetter = options.arrayDiffLimitGetter or @wsonDiff.options.arrayDiffLimitGetter
 
   diff: (src, dst) ->
     state = new State @

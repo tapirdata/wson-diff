@@ -1,9 +1,9 @@
 _ = require 'lodash'
 
-class Idxer 
-  
+class Idxer
+
   constructor: (@state, vals, allString=true) ->
-    # console.log 'Idxer allString=%s', allString 
+    # console.log 'Idxer allString=%s', allString
     if allString
       # uses = {}
       for val, idx in vals
@@ -14,8 +14,8 @@ class Idxer
         # if not use?
         #   uses[val] = use = []
         # use.push idx
-      keys = vals 
-    if not allString    
+      keys = vals
+    if not allString
       # uses = {}
       keys = new Array vals.length
       for val, idx in vals
@@ -26,8 +26,8 @@ class Idxer
         #   uses[key] = use = []
         # use.push idx
     @keys = keys
-    @allString = allString    
-  
+    @allString = allString
+
   getItem: (idx) ->
     key = @keys[idx]
     if @allString

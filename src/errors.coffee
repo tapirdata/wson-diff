@@ -7,6 +7,6 @@ class WsonDiffError extends Error
       Error.captureStackTrace @, @constructor
 
 
-exports.WsonDiffError = WsonDiffError      
+exports.WsonDiffError = WsonDiffError
 
 

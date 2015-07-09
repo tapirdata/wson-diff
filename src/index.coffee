@@ -12,7 +12,7 @@ class WsonDiff
   constructor: (options) ->
     options or= {}
     WSON = options.WSON
-    if not WSON?  
+    if not WSON?
       WSON = wson options.wsonOptions
     @WSON = WSON
     @options = options

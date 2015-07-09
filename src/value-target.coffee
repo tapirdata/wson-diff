@@ -31,7 +31,7 @@ class ValueTarget extends Target
     if key?
       stack.push current
       current = current[key]
-    @current = current  
+    @current = current
     return
 
   assign: (key, values) ->
@@ -48,22 +48,22 @@ class ValueTarget extends Target
           break
         else
           ++key
-    else      
+    else
       assert @stack.length == 0, 'assign can be used without key at root only'
       @current = values[0]
       @root = @current
     return
-    
+
   delete: (key, len) ->
     debug 'delete: key=%o, len=%o @current=%o', key, len, @current
     current = @current
     if _.isArray current
       current.splice key, len
-    else  
+    else
       delete current[key]
     return
 
-  insert: (key, values) -> 
+  insert: (key, values) ->
     current = @current
     current.splice.apply current, [key, 0].concat values
     return

@@ -1,3 +1,5 @@
+extdefs = require './extdefs'
+
 module.exports = [
   {
     description: 'same number'
@@ -206,6 +208,11 @@ module.exports = [
     wish: 'abcdXefghijkl'.split ''
   }
   {
+    description: 'append'
+    have: 'abcdefghijkl'.split ''
+    wish: 'abcdefghijklm'.split ''
+  }
+  {
     description: 'insert that needs quoting'
     have: 'a,b,c,d,e,f,g,h,i,j,k,l'.split ','
     wish: 'a,b,c,d,e,f,g,[],h,i,j,k,l'.split ','
@@ -311,6 +318,55 @@ module.exports = [
     have: do -> x = foo: a: {y: 3}; x
     wish: do -> x = foo: a: {y: 3}; x.foo.a.foo = x.foo; x
     delta: '|foo|a|foo:|1'
+  }
+  {
+    description: 'double replace, no diff-limit'
+    have: 'abcdefghijkl'.split ''
+    wish: 'abcDEfghijkl'.split ''
+    delta: '|{3:D:E}'
+  }
+  {
+    description: 'double replace, diff-limit = 2'
+    diffOptions: arrayDiffLimitGetter: -> 2
+    have: 'abcdefghijkl'.split ''
+    wish: 'abcDEfghijkl'.split ''
+    delta: '[a|b|c|D|E|f|g|h|i|j|k|l]'
+  }
+  {
+    description: 'single replace, diff-limit = 2'
+    diffOptions: arrayDiffLimitGetter: -> 2
+    have: 'abcdefghijkl'.split ''
+    wish: 'abcDefghijkl'.split ''
+    delta: '|{3:D}'
+  }
+  {
+    description: 'replace object by custum object'
+    have: {a: {x: 3, y: 4}}
+    wish: {a: new extdefs.Point(3, 4)}
+    delta: '|a:[:Point|#3|#4]'
+    wsonClone: true
+  }
+  {
+    description: 'replace patch custum object'
+    have: {a: new extdefs.Point(3, 4)}
+    wish: {a: new extdefs.Point(3, 14)}
+    delta: '|a|y:#14'
+    wsonClone: true
+  }
+  {
+    description: 'replace patch custum object with diffKeys'
+    have: {a: new extdefs.Foo(3, 4, 5)}
+    wish: {a: new extdefs.Foo(3, 14, 5)}
+    delta: '|a|y:#14'
+    wsonClone: true
+  }
+  {
+    description: 'replace patch custum object with diffKeys; ignore changed attribute'
+    have: {a: new extdefs.Foo(3, 4, 5)}
+    wish: {a: new extdefs.Foo(3, 14, 15)}
+    delta: '|a|y:#14'
+    noPatch: true
+    wsonClone: true
   }
 ]
 

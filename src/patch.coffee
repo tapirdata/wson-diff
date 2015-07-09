@@ -54,7 +54,7 @@ class State
         OBJECT
       else
         SCALAR
-      @currentType = type  
+      @currentType = type
       if @haveSteps == 0
         @scopeType = type
     type
@@ -71,7 +71,7 @@ class State
       ++@haveSteps
       @currentType = null
       @nextKey = null
-    return  
+    return
 
   enterPath: (skey) ->
     @budgeNextKey()
@@ -118,7 +118,7 @@ class State
 
   addAssign: (value) ->
     @assignValues.push value
-    
+
   commitAssign: ->
     debug 'commitAssign nextKey=%o assignValues=%o', @nextKey, @assignValues
     if @assignValues?

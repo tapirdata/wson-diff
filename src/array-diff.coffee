@@ -33,7 +33,7 @@ class Modifier
     inEnd = 0
     inGapSum = 0
     gapSum = 0
-   
+
     nextOutLeg = ->
       if outLegIdx < outLegs.length
         outLeg = outLegs[outLegIdx++]
@@ -69,7 +69,7 @@ class Modifier
           # both legs: take the first one
           if inLater > 0
             takeOut = true
-          else  
+          else
             takeIn = true
         else
           # only outLeg: take it
@@ -93,7 +93,7 @@ class Modifier
             extraLen = inLater
 
       if extraLen < 0
-        # delete 
+        # delete
         legs.push
           id: @ad.nextLegId++
           gap: inGapSum - gapSum
@@ -103,7 +103,7 @@ class Modifier
         outGapSum = gapSum
         @restBalance -= inLater
       else if extraLen > 0
-        # insert 
+        # insert
         legs.push
           id: @ad.nextLegId++
           gap: outGapSum - gapSum
@@ -135,7 +135,7 @@ class Modifier
 
     @legs = legs
     return
-        
+
 
   getDeletes: (meModOff, cb) ->
     debug 'getMoves: mdx=%o meModOff=%o', @mdx, meModOff
@@ -159,7 +159,7 @@ class Modifier
           if restBalance == 0
             break
       haveLoc -= leg.gap
-    @restBalance = restBalance    
+    @restBalance = restBalance
     return
 
   getInserts: (meModOff, cb) ->
@@ -176,7 +176,7 @@ class Modifier
         if leg.done
           haveLoc -= legLen
         else if not leg.youMdx?
-          cb @haveBegin + meModOff + haveLoc, @wishBegin + wishLoc - legLen, legLen 
+          cb @haveBegin + meModOff + haveLoc, @wishBegin + wishLoc - legLen, legLen
           @doneBalance += legLen
           leg.done = true
           restBalance += legLen
@@ -187,7 +187,7 @@ class Modifier
         haveLoc += legLen
       haveLoc -= leg.gap
       wishLoc -= leg.gap
-    @restBalance = restBalance    
+    @restBalance = restBalance
     return
 
 
@@ -211,7 +211,7 @@ class Modifier
     gap = @closeGap
     if gap > 0
       cb @haveBegin + meModOff + haveLoc, @wishBegin + wishLoc, gap
-    return  
+    return
 
 
   putMove: (legId) ->
@@ -223,7 +223,7 @@ class Modifier
       legLen = leg.len
       if leg.id == legId
         @doneBalance += legLen
-        leg.done = true  
+        leg.done = true
         return meLoc
       else
         if legLen > 0
@@ -243,7 +243,7 @@ class Modifier
       meLoc += leg.gap
       legLen = leg.len
       youMdx = leg.youMdx
-      if youMdx? and leg.youMdx > @mdx 
+      if youMdx? and leg.youMdx > @mdx
         youModifier = ad.modifiers[youMdx]
         youModOff = meModOff + ad.getModOffDiff @mdx, youMdx
         debug 'getMoves:   meModOff=%o, youModOff=%o', meModOff, youModOff
@@ -253,12 +253,12 @@ class Modifier
         youModifier = youModifier.haveBegin + youModOff + youLoc
         if legLen < 0
           cb meIdx, youModifier + legLen, -legLen
-        else  
+        else
           cb youModifier, meIdx, legLen
           meLoc += legLen
         @doneBalance += legLen
-        leg.done = true  
-      else    
+        leg.done = true
+      else
         if legLen > 0
           if leg.done
             meLoc += legLen
@@ -272,7 +272,7 @@ class ArrayDiff
   constructor: (@state, have, wish) ->
     @have = have
     @wish = wish
-    @maxDiffLenGetter = @state.differ.maxDiffLenGetter
+    @arrayDiffLimitGetter = @state.differ.arrayDiffLimitGetter
     @setupIdxers()
     @setupModifiers()
     if @modifiers.length > 0
@@ -314,10 +314,10 @@ class ArrayDiff
         else
           wishKeyUses[wishKey] = [useTo]
         ++wishOfs
-    
-    maxDiffLen = @maxDiffLenGetter?(@wish)
 
-    diffLen = mdiff(haveIdxer.keys, wishIdxer.keys).scanDiff scanCb, maxDiffLen
+    diffLenLimit = @arrayDiffLimitGetter?(@wish)
+
+    diffLen = mdiff(haveIdxer.keys, wishIdxer.keys).scanDiff scanCb, diffLenLimit
     @aborted = not diffLen?
     @modifiers = modifiers
     @wishKeyUses = wishKeyUses
@@ -341,10 +341,10 @@ class ArrayDiff
         if wishKeyUse and wishKeyUse.length > 0
           [wishMdx, wishOfs] = wishKeyUse.pop()
           # debug 'setupLegs:   modifier mdx=%o leg=%o wishMdx=%o, haveOfs=%o, wishOfs=%o', modifier.mdx, leg, wishMdx, haveOfs, wishOfs
-          if leg? and wishMdx == leg.wishMdx and haveOfs == leg.haveOfs + leg.len and wishOfs == leg.wishOfs + leg.len 
-            ++leg.len 
+          if leg? and wishMdx == leg.wishMdx and haveOfs == leg.haveOfs + leg.len and wishOfs == leg.wishOfs + leg.len
+            ++leg.len
             # debug 'setupLegs:   ..%o', leg
-          else 
+          else
             if leg?
               # debug 'setupLegs:   ->%o', leg
               modifiers[leg.haveMdx].addPreLeg leg
@@ -356,7 +356,7 @@ class ArrayDiff
               wishMdx: wishMdx
               wishOfs: wishOfs
               len: 1
-      if leg?  
+      if leg?
         # debug 'setupLegs:   .->%o', leg
         modifiers[leg.haveMdx].addPreLeg leg
         modifiers[leg.wishMdx].addPreLeg leg
@@ -399,8 +399,8 @@ class ArrayDiff
     if count > 0
       delta += ']'
 
-    # @debugModifiers 'getDeleteDelta done.' 
-    delta    
+    # @debugModifiers 'getDeleteDelta done.'
+    delta
 
   getInsertDelta: ->
     delta = ''
@@ -420,8 +420,8 @@ class ArrayDiff
     if count > 0
       delta += ']'
 
-    # @debugModifiers 'getInsertDelta done.' 
-    delta    
+    # @debugModifiers 'getInsertDelta done.'
+    delta
 
   getPatchDelta: ->
     delta = ''
@@ -444,15 +444,15 @@ class ArrayDiff
           )
           if iDelta[0] != ':'
             canChain = false
-          if i > 0 and not canChain  
+          if i > 0 and not canChain
             delta += '|' + (havePos + i)
           delta += iDelta
         ++count
       meModOff += modifier.doneBalance
     if count > 0
       delta += '}'
-    delta    
-      
+    delta
+
 
   getMoveDelta: ->
     delta = ''
@@ -467,10 +467,10 @@ class ArrayDiff
           delta += '~' + len
         delta += '@' + dstPos
         ++count
-      meModOff += modifier.doneBalance  
+      meModOff += modifier.doneBalance
     if count > 0
       delta += ']'
-    # @debugModifiers 'getMoveDelta done.' 
+    # @debugModifiers 'getMoveDelta done.'
     delta
 
   getDelta: ->
@@ -483,7 +483,7 @@ class ArrayDiff
       delta += @getInsertDelta()
       delta += @getPatchDelta()
       delta
-     
+
   debugModifiers: (title) ->
     debug title + ' modifiers:'
     for modifier in @modifiers
