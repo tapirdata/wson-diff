@@ -1,6 +1,6 @@
 {
   "name": "wson-diff",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Object diff and patch",
   "main": "index.js",
   "scripts": {
