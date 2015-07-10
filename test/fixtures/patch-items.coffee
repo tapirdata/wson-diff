@@ -170,7 +170,7 @@ module.exports = [
   }
   {
     have: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
-    delta: '|beff[-1~2|2~2]'
+    delta: '|beff[-1+2|2+2]'
     wish: {beff: ['a', 'd', 'g']}
   }
   # delete fail
@@ -234,12 +234,12 @@ module.exports = [
   }
   {
     have: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
-    delta: '|beff[!1~2@4]'
+    delta: '|beff[!1+2@4]'
     wish: {beff: ['a', 'd', 'e', 'f', 'b', 'c', 'g']}
   }
   {
     have: {beff: ['a', 'b', 'c', 'd', 'e', 'f', 'g']}
-    delta: '|beff[!1~2@4|1@0]'
+    delta: '|beff[!1+2@4|1@0]'
     wish: {beff: ['d', 'a', 'e', 'f', 'b', 'c', 'g']}
   }
   # move fail

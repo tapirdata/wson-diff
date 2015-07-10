@@ -68,10 +68,12 @@ class ValueTarget extends Target
     current.splice.apply current, [key, 0].concat values
     return
 
-  move: (srcKey, dstKey, len) ->
-    debug 'move: srcKey=%o, dstKey=%o, len=%o', srcKey, dstKey, len
+  move: (srcKey, dstKey, len, reverse) ->
+    debug 'move: srcKey=%o dstKey=%o len=%o reverse=%o', srcKey, dstKey, len, reverse
     current = @current
     chunk = current.splice srcKey, len
+    if reverse
+      chunk.reverse()
     current.splice.apply current, [dstKey, 0].concat chunk
 
   getRoot: -> @root

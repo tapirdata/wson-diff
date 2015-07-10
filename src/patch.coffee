@@ -26,8 +26,8 @@ class PatchError extends errors.WsonDiffError
 
 
 reIndex = /^\d+$/
-reRange = /^(\d+)(~(\d+))?$/
-reMove = /^(\d+)(~(\d+))?@(\d+)$/
+reRange = /^(\d+)(\+(\d+))?$/
+reMove = /^(\d+)(\+(\d+))?(@|~)(\d+)$/
 
 SCALAR = 1
 OBJECT = 2
@@ -36,7 +36,7 @@ ARRAY  = 3
 
 class State
 
-  constructor: (@str, @target, @stage, parent) ->
+  constructor: (@delta, @target, @stage, parent) ->
     @parent = parent
     @nextKey = null
     @scopeType = @currentType = if parent then parent.getCurrentType() else null
@@ -98,7 +98,7 @@ class State
 
   push: (stage, rawNext) ->
     @budgeNextKey()
-    state = new State @str, @target, stage, @
+    state = new State @delta, @target, stage, @
     state.rawNext = rawNext
     state
 
@@ -147,7 +147,7 @@ class State
     return
 
   startModify: ->
-    c = @str[++@pos]
+    c = @delta[++@pos]
     debug 'startModify c=%o', c
     @budgeNextKey()
     switch c
@@ -189,10 +189,11 @@ class State
       throw new PrePatchError "ill-formed move '#{skey}'"
     srcKey = Number m[1]
     len = if m[3]? then Number m[3] else 1
-    dstKey = Number m[4]
+    reverse = m[4] == '~'
+    dstKey = Number m[5]
 
-    debug 'moveKey srcKey=%o, dstKey=%o, len=%o', srcKey, dstKey, len
-    @target.move srcKey, dstKey, len
+    debug 'moveKey srcKey=%o dstKey=%o len=%o reverse=%o', srcKey, dstKey, len, reverse
+    @target.move srcKey, dstKey, len, reverse
     return
 
 
@@ -363,18 +364,18 @@ class Patcher
 
   constructor: (@wsonDiff, options) ->
 
-  patchTarget: (target, str) ->
-    debug 'patch: target=%o, str=%o', target, str
+  patchTarget: (target, delta) ->
+    debug 'patch: target=%o, delta=%o', target, delta
     try
-      if str[0] != '|'
-        value = @wsonDiff.WSON.parse str
+      if delta[0] != '|'
+        value = @wsonDiff.WSON.parse delta
         target.assign null, [value]
         return
 
-      state = new State str, target, stages.pathBegin
+      state = new State delta, target, stages.pathBegin
       state.pos = 1
 
-      @wsonDiff.WSON.parsePartial str,
+      @wsonDiff.WSON.parsePartial delta,
         howNext: [true, 1]
         cb: (isValue, value, nextPos) ->
           stage = state.stage
@@ -386,7 +387,7 @@ class Patcher
           if not handler
             handler = stage.default
           if not handler
-            throw new PatchError str, state.pos
+            throw new PatchError delta, state.pos
           debug 'patch: handler=%o', handler
           state.rawNext = true
           state.skipNext = 0
@@ -401,25 +402,25 @@ class Patcher
         backrefCb: (refIdx) -> target.get refIdx
 
       debug 'patch: done: stage=%o', state.stage.name
-      state.pos = str.length
+      state.pos = delta.length
       handler = state.stage.end
       if not handler
-        throw new PatchError str
+        throw new PatchError delta
       handler.call state
       return
 
     catch error
       if error instanceof PrePatchError
-        throw new PatchError str, state.pos, error.cause
+        throw new PatchError delta, state.pos, error.cause
       else if error instanceof wson.ParseError
         throw new PatchError error.s, error.pos, error.cause
       else
         throw error
-        # throw new PatchError str, state.pos, error
+        # throw new PatchError delta, state.pos, error
 
-  patch: (value, str) ->
+  patch: (value, delta) ->
     target = new ValueTarget value
-    @patchTarget target, str
+    @patchTarget target, delta
     target.getRoot()
 
 

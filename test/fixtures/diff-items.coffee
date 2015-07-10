@@ -108,7 +108,7 @@ module.exports = [
     description: 'multi deletes'
     have: 'abcdefghijkl'.split ''
     wish: 'abdefghkl'.split ''
-    delta: '|[-8~2|2]'
+    delta: '|[-8+2|2]'
   }
   {
     description: 'single forward move'

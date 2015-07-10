@@ -12,7 +12,7 @@ class Target
 
   insert: (key, values) ->
 
-  move: (srcKey, dstKey, len) ->
+  move: (srcKey, dstKey, len, reverse) ->
 
 
 module.exports = Target
