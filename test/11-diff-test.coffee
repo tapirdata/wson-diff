@@ -38,6 +38,7 @@ for setup in require './fixtures/setups'
           delta = differ.diff item.have, item.wish
           debug 'diff: have=%o, wish=%o, delta=%o', item.have, item.wish, delta
           describe item.description, ->
+            console.log 'item=', item
             if _.has item, 'delta'
               it "should diff #{saveRepr item.have} to #{saveRepr item.wish} with #{saveRepr item.delta}.", ->
                 expect(delta).to.be.equal item.delta

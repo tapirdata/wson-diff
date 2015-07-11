@@ -18,5 +18,7 @@ class Target
 
   move: (srcKey, dstKey, len, reverse) ->
 
+  substitute: (patches) ->
+
 
 module.exports = Target

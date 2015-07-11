@@ -83,6 +83,26 @@ class ValueTarget extends Target
       chunk.reverse()
     current.splice.apply current, [dstKey, 0].concat chunk
 
+  substitute: (patches) ->
+    debug 'substitute: patches=%o', patches
+    have = @current
+    result = ''
+    endOfs = 0 
+    for patch in patches
+      [ofs, len, str] = patch
+      if ofs > endOfs
+        result += have.slice endOfs, ofs
+      if str.length > 0  
+        result += str
+      endOfs = ofs + len  
+      debug 'substitute: patch=%o result=%o', patch, result
+    if have.length > endOfs
+      result += have.slice endOfs
+    debug 'substitute: result=%o', result
+    @current = result  
+    if @stack.length == 0
+      @root = result
+
   getRoot: -> @root
 
 

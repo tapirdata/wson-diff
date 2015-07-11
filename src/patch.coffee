@@ -28,10 +28,12 @@ class PatchError extends errors.WsonDiffError
 reIndex = /^\d+$/
 reRange = /^(\d+)(\+(\d+))?$/
 reMove = /^(\d+)([+|-](\d+))?@(\d+)$/
+reSubst = /^(\d+)(\+(\d+))?(=(.+))?$/
 
 SCALAR = 1
-OBJECT = 2
-ARRAY  = 3
+STRING = 2
+OBJECT = 3
+ARRAY  = 4
 
 
 class State
@@ -53,6 +55,8 @@ class State
         ARRAY
       else if _.isObject value
         OBJECT
+      else if _.isString value
+        STRING
       else
         SCALAR
       @currentType = type
@@ -110,7 +114,7 @@ class State
 
   pushState: ->
     @budgePendingKey()
-    debug 'pushState'
+    debug 'pushState stage=%o', @stage?.name
     new State @delta, @pos, @target, @
 
   popState: ->
@@ -146,14 +150,14 @@ class State
       @replaceValues = null
     return
 
-  unsetKey: (key) ->
-    debug 'deleteKey key=%o', key
+  doUnset: (key) ->
+    debug 'doUnset key=%o', key
     @budgePendingKey()
     @target.unset key
     return
 
-  deleteKey: (skey) ->
-    debug 'deleteKey skey=%o', skey
+  doDelete: (skey) ->
+    debug 'doDelete skey=%o', skey
     @budgePendingKey()
     m = reRange.exec skey
     if not m?
@@ -163,10 +167,10 @@ class State
     @target.delete key, len
     return
 
-  startModify: ->
+  continueModify: ->
     c = @delta[++@pos]
     type = @getCurrentType()
-    debug 'startModify c=%o', c
+    debug 'coninueModify c=%o', c
     switch c
       when '='
         expectedType = OBJECT
@@ -186,6 +190,9 @@ class State
       when 'r'
         expectedType = ARRAY
         stage = stages.replaceBegin
+      when 's'
+        expectedType = STRING
+        stage = stages.substituteBegin
       else
         throw new PrePatchError()
     if type != expectedType
@@ -197,6 +204,12 @@ class State
     @rawNext = true
     @skipNext = 1
     @
+
+  startModify: ->
+    debug 'startModify'
+    state = @pushState()
+    state.continueModify()
+    state
 
   startInsert: (skey) ->
     if not reIndex.test skey
@@ -213,8 +226,8 @@ class State
     @target.insert @insertKey, @insertValues
     return
 
-  moveKey: (skey) ->
-    debug 'moveKey skey=%o', skey
+  doMove: (skey) ->
+    debug 'doMove skey=%o', skey
     m = reMove.exec skey
     if not m?
       throw new PrePatchError "ill-formed move '#{skey}'"
@@ -227,19 +240,149 @@ class State
       reverse = false
     dstKey = Number m[4]
 
-    debug 'moveKey srcKey=%o dstKey=%o len=%o reverse=%o', srcKey, dstKey, len, reverse
+    debug 'doMove srcKey=%o dstKey=%o len=%o reverse=%o', srcKey, dstKey, len, reverse
     @target.move srcKey, dstKey, len, reverse
+    return
+
+  startSubstitute: (skey) ->
+    @substituteValues = []
+    @addSubstitute skey
+    return
+
+  addSubstitute: (skey) ->
+    m = reSubst.exec skey
+    if not m? 
+      throw new PrePatchError "invalid substitution #{skey} for string #{@target.get()}"
+    ofs = Number m[1]
+    if m[3]?
+      len = Number(m[3]) + 1
+    else
+      len = 0
+    if m[5]?
+      str = m[5]
+    else  
+      str = ''
+    @substituteValues.push [ofs, len, str]
+
+  commitSubstitute: ->
+    debug 'commitSubstitute insertValues=%o', @substituteValues
+    @target.substitute @substituteValues
     return
 
 
 stages =
+  assignBegin:
+    value: (value) ->
+      @enterObjectKey value
+      @stage = stages.assignHasKey
+      @
+    '#': (value) ->
+      @enterObjectKey ''
+      @stage = stages.assignHasKey
+      @
+  assignHasKey:
+    '|': ->
+      @stage = stages.assignBegin
+      @
+    ':': ->
+      @rawNext = false
+      @stage = stages.assignHasColon
+      @
+    '[': ->
+      @stage = stages.assignHasModify
+      @startModify()
+  assignHasColon:
+    value: (value) ->
+      @assignValue value
+      @stage = stages.assignHasValue
+      @
+  assignHasValue:
+    '|': ->
+      @resetPath()
+      @stage = stages.assignBegin
+      @
+    ']': ->
+      if not @parent?
+        throw new PrePatchError()
+      @resetPath()
+      @stage = stages.modifyEnd
+      @
+    end: ->
+      if @parent?
+        throw new PrePatchError()
+  assignHasModify:
+    '|': ->
+      @resetPath()
+      @stage = stages.assignBegin
+      @
+    ']': ->
+      if not @parent?
+        throw new PrePatchError()
+      @resetPath()
+      @stage = stages.modifyEnd
+      @
+    end: ->
+      if @parent?
+        throw new PrePatchError()
+
+  replaceBegin:
+    value: (value) ->
+      @enterArrayKey value
+      @stage = stages.replaceHasKey
+      @
+  replaceNextKey:
+    value: (value) ->
+      @enterObjectKey value
+      @stage = stages.replaceHasKey
+      @
+  replaceHasKey:
+    '|': ->
+      @stage = stages.replaceNextKey
+      @
+    ':': ->
+      @rawNext = false
+      @stage = stages.replaceHasColon
+      @startReplace()
+      @
+    '[': ->
+      @stage = stages.replaceHasModify
+      @startModify()
+  replaceHasColon:
+    value: (value) ->
+      @addReplace value
+      @stage = stages.replaceHasValue
+      @
+  replaceHasValue:
+    ':': ->
+      @rawNext = false
+      @stage = stages.replaceHasColon
+      @
+    '|': ->
+      @commitReplace()
+      @resetPath()
+      @stage = stages.replaceBegin
+      @
+    ']': ->
+      @commitReplace()
+      @stage = stages.modifyEnd
+      @
+  replaceHasModify:
+    '|': ->
+      @commitReplace()
+      @stage = stages.replaceBegin
+      @
+    ']': ->
+      @commitReplace()
+      @stage = stages.modifyEnd
+      @
+
   unsetBegin:
     value: (value) ->
-      @unsetKey value
+      @doUnset value
       @stage = stages.unsetHas
       @
     '#': ->
-      @unsetKey ''
+      @doUnset ''
       @stage = stages.unsetHas
       @
   unsetHas:
@@ -252,11 +395,11 @@ stages =
 
   deleteBegin:
     value: (value) ->
-      @deleteKey value
+      @doDelete value
       @stage = stages.deleteHas
       @
     '#': ->
-      @deleteKey ''
+      @doDelete ''
       @stage = stages.deleteHas
       @
   deleteHas:
@@ -298,7 +441,7 @@ stages =
 
   moveBegin:
     value: (value) ->
-      @moveKey value
+      @doMove value
       @stage = stages.moveHas
       @
   moveHas:
@@ -309,111 +452,30 @@ stages =
       @stage = stages.moveBegin
       @
 
-  assignBegin:
+  substituteBegin:
     value: (value) ->
-      @enterObjectKey value
-      @stage = stages.assignHasKey
+      @startSubstitute value
+      @stage = stages.substituteHas
       @
-    '#': (value) ->
-      @enterObjectKey ''
-      @stage = stages.assignHasKey
-      @
-  assignHasKey:
-    '|': ->
-      @stage = stages.assignBegin
-      @
-    ':': ->
-      @rawNext = false
-      @stage = stages.assignHasColon
-      @
-    '[': ->
-      @stage = stages.assignHasModify
-      state = @pushState()
-      state.startModify()
-  assignHasColon:
-    value: (value) ->
-      @assignValue value
-      @stage = stages.assignHasValue
-      @
-  assignHasValue:
-    '|': ->
-      @resetPath()
-      @stage = stages.assignBegin
-      @
+  substituteHas:
     ']': ->
-      if not @parent?
-        throw new PrePatchError()
-      @resetPath()
+      @commitSubstitute()
       @stage = stages.modifyEnd
       @
-    end: ->
-      if @parent?
-        throw new PrePatchError()
-  assignHasModify:
     '|': ->
-      @resetPath()
-      @stage = stages.assignBegin
+      @stage = stages.substituteNext
       @
-    end: ->
-      if @parent?
-        throw new PrePatchError()
+  substituteNext:
+    value: (value) ->
+      @addSubstitute value
+      @stage = stages.substituteHas
+      @
 
-  replaceBegin:
-    value: (value) ->
-      @enterArrayKey value
-      @stage = stages.replaceHasKey
-      @
-  replaceNextKey:
-    value: (value) ->
-      @enterObjectKey value
-      @stage = stages.replaceHasKey
-      @
-  replaceHasKey:
-    '|': ->
-      @stage = stages.replaceNextKey
-      @
-    ':': ->
-      @rawNext = false
-      @stage = stages.replaceHasColon
-      @startReplace()
-      @
-    '[': ->
-      @stage = stages.replaceHasModify
-      state = @pushState()
-      state.startModify()
-  replaceHasColon:
-    value: (value) ->
-      @addReplace value
-      @stage = stages.replaceHasValue
-      @
-  replaceHasValue:
-    ':': ->
-      @rawNext = false
-      @stage = stages.replaceHasColon
-      @
-    '|': ->
-      @commitReplace()
-      @resetPath()
-      @stage = stages.replaceBegin
-      @
-    ']': ->
-      @commitReplace()
-      @stage = stages.modifyEnd
-      @
-  replaceHasModify:
-    '|': ->
-      @commitReplace()
-      @stage = stage.replaceBegin
-      @
-    ']': ->
-      @commitReplace()
-      @stage = stages.modifyEnd
-      @
 
   modifyEnd:
     canPop: true
     '[': ->
-      @startModify()
+      @continueModify()
 
   patchBegin:
     value: (value) ->
@@ -426,8 +488,7 @@ stages =
       @
     '[': ->
       @stage = stages.patchHasModify
-      state = @pushState()
-      state.startModify()
+      @startModify()
 
   patchHasModify:
     value: (value) ->
@@ -500,7 +561,6 @@ class Patcher
 
     catch error
       if error instanceof PrePatchError
-        console.log state.pos
         throw new PatchError delta, state.pos, error.cause
       else if error instanceof wson.ParseError
         throw new PatchError error.s, error.pos, error.cause

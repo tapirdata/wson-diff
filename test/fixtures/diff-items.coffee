@@ -99,6 +99,11 @@ module.exports = [
     delta: '|foo[-b|c][=a:alf]'
   }
   {
+    description: 'object deep multi diff'
+    have: {foo: {members: {a: 'alice', b: 'bob'}, contrahents: {e: 'eve', m: 'mallet'}}, bar: {members: {a: 'alice', b: 'bob'}}}
+    wish: {foo: {members: {a: 'Alice', b: 'Bob'}, contrahents: {e: 'Eve', m: 'Mallet'}}, bar: {members: {a: 'Alice', b: 'Bob'}}}
+  }
+  {
     description: 'no change'
     have: 'abcdefghijkl'.split ''
     wish: 'abcdefghijkl'.split ''
@@ -384,5 +389,34 @@ module.exports = [
     noPatch: true
     wsonClone: true
   }
+  {
+    description: 'deep multi replace'
+    have:
+      foo:
+        members:
+          a: 'alice'.split('')
+          b: 'bob'.split('')
+        contrahents: 
+          e: 'eve'.split('')
+          m: 'mallet'.split('')
+      bar: 
+        members:
+          a: 'alice'.split('')
+          b: 'bob'.split('')
+    wish:
+      foo:
+        members:
+          a: 'Alice'.split('')
+          b: 'Bob'.split('')
+        contrahents: 
+          e: 'Eve'.split('')
+          m: 'Mallet'.split('')
+      bar: 
+        members:
+          a: 'Alice'.split('')
+          b: 'Bob'.split('')
+    delta: '|bar|members[=a[r0:A]|b[r0:B]]|foo[=contrahents[=e[r0:E]|m[r0:M]]|members[=a[r0:A]|b[r0:B]]]'
+    noPatch: true
+  }       
 ]
 

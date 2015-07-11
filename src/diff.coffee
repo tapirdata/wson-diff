@@ -2,6 +2,7 @@ _ = require 'lodash'
 debug = require('debug') 'wson-diff:diff'
 
 ArrayDiff = require './array-diff'
+StringDiff = require './string-diff'
 
 class State
 
@@ -27,6 +28,17 @@ class State
       delta = ':' + delta
     delta
 
+  getStringDelta: (have, wish, isRoot) ->
+    sd = new StringDiff @, have, wish
+    if not sd.aborted
+      delta = sd.getDelta()
+      if isRoot and delta?
+        delta = '|' + delta
+    @wishStack.pop()
+    if sd.aborted
+      delta = @getPlainDelta have, wish, isRoot
+    delta
+
   getObjectDelta: (have, wish, isRoot) ->
     @wishStack.push wish
     delta = ''
@@ -46,7 +58,7 @@ class State
           if isRoot
             delta += '|'
           delta += '[-'
-        else  
+        else
           delta += '|'
         delta += @stringify key
         ++delCount
@@ -69,12 +81,12 @@ class State
       if isRoot
         if delCount == 0
           delta += '|'
-        delta += setDelta  
+        delta += setDelta
       else
         if setCount == 1 and delCount == 0
           delta += '|'
           delta += setDelta
-        else  
+        else
           delta += '[=' + setDelta + ']'
     @wishStack.pop()
     if delta.length
@@ -103,6 +115,11 @@ class State
     else if _.isObject have
       if not _.isArray(wish) and _.isObject(wish) and have.constructor == wish.constructor
         return @getObjectDelta have, wish, isRoot
+      else
+        return @getPlainDelta have, wish, isRoot
+    else if false and _.isString have
+      if _.isString wish
+        return @getStringDelta have, wish, isRoot
       else
         return @getPlainDelta have, wish, isRoot
     else #scalar have
