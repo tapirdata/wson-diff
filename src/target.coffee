@@ -6,7 +6,11 @@ class Target
 
   budge: (outSteps, key) ->
 
-  assign: (key, values) ->
+  assign: (key, value) ->
+
+  unset: (key) ->
+
+  replace: (key, values) ->
 
   delete: (key, len) ->
 

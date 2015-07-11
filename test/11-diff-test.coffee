@@ -41,7 +41,7 @@ for setup in require './fixtures/setups'
             if _.has item, 'delta'
               it "should diff #{saveRepr item.have} to #{saveRepr item.wish} with #{saveRepr item.delta}.", ->
                 expect(delta).to.be.equal item.delta
-            if delta? and delta != '|'
+            if delta?
               if not item.noPatch
                 if item.wsonClone
                   have = wDiff.WSON.parse wDiff.WSON.stringify item.have # do a real deep clone (with constructors)

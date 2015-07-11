@@ -34,33 +34,40 @@ class ValueTarget extends Target
     @current = current
     return
 
-  assign: (key, values) ->
-    debug 'assign: key=%o, values=%o', key, values
+  assign: (key, value) ->
+    debug 'assign: key=%o, value=%o', key, value
     if key?
-      valuesLen = values.length
-      if valuesLen == 0
-        return
-      current = @current
-      valuesIdx = 0
-      loop
-        current[key] = values[valuesIdx]
-        if ++valuesIdx == valuesLen
-          break
-        else
-          ++key
+      @current[key] = value
     else
       assert @stack.length == 0, 'assign can be used without key at root only'
-      @current = values[0]
+      @current = value
       @root = @current
+    return
+
+  unset: (key) ->
+    debug 'unset: key=%o, @current=%o', key, @current
+    delete @current[key]
+    return
+
+  replace: (key, values) ->
+    debug 'assign: key=%o, values=%o', key, values
+    valuesLen = values.length
+    if valuesLen == 0
+      return
+    current = @current
+    valuesIdx = 0
+    loop
+      current[key] = values[valuesIdx]
+      if ++valuesIdx == valuesLen
+        break
+      else
+        ++key
     return
 
   delete: (key, len) ->
     debug 'delete: key=%o, len=%o @current=%o', key, len, @current
     current = @current
-    if _.isArray current
-      current.splice key, len
-    else
-      delete current[key]
+    current.splice key, len
     return
 
   insert: (key, values) ->

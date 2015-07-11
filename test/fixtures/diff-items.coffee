@@ -20,7 +20,7 @@ module.exports = [
     delta: '#42'
   }
   {
-    description: 'number to obeject'
+    description: 'number to object'
     have: 42
     wish: {foo: {a: 'alice', b: 'bob'}, bar: {a: 'alice', b: 'bob'}}
     delta: '{bar:{a:alice|b:bob}|foo:{a:alice|b:bob}}'
@@ -44,22 +44,22 @@ module.exports = [
     delta: null
   }
   {
-    description: 'object changed single'
+    description: 'object change single'
     have: {foo: {a: 'alice', b: 'bob'}, bar: {a: 'alice', b: 'bob'}}
     wish: {foo: {a: 'alice', b: 'bobby'}, bar: {a: 'alice', b: 'bob'}}
     delta: '|foo|b:bobby'
   }
   {
-    description: 'object changed multi'
+    description: 'object change multi'
     have: {foo: {a: 'alice', b: 'bob'}, bar: {a: 'alice', b: 'bob'}}
     wish: {foo: {a: 'alice', b: 'bobby'}, bar: {a: 'alice', b: 'bobby'}}
     delta: '|bar|b:bobby|foo|b:bobby'
   }
   {
-    description: 'object changed collected multi'
+    description: 'object change collected multi'
     have: {foo: {a: 'alice', b: 'bob'}, bar: {a: 'alice', b: 'bob'}}
     wish: {foo: {a: 'alf', b: 'bobby'}, bar: {a: 'alice', b: 'bob'}}
-    delta: '|foo{a:alf|b:bobby}'
+    delta: '|foo[=a:alf|b:bobby]'
   }
   {
     description: 'object changed whole sub'
@@ -90,13 +90,13 @@ module.exports = [
     description: 'object del and multi collected replace'
     have: {foo: {a: 'alice', b: 'bob'}, bar: {a: 'alice', b: 'bob'}}
     wish: {foo: {a: 'alf', c: 'chris'}, bar: {a: 'alice', b: 'bob'}}
-    delta: '|foo[-b]{a:alf|c:chris}'
+    delta: '|foo[-b][=a:alf|c:chris]'
   }
   {
     description: 'object multi del and single replace '
     have: {foo: {a: 'alice', b: 'bob', c: 'chris'}, bar: {a: 'alice', b: 'bob'}}
     wish: {foo: {a: 'alf'}, bar: {a: 'alice', b: 'bob'}}
-    delta: '|foo[-b|c]a:alf'
+    delta: '|foo[-b|c][=a:alf]'
   }
   {
     description: 'no change'
@@ -108,129 +108,145 @@ module.exports = [
     description: 'multi deletes'
     have: 'abcdefghijkl'.split ''
     wish: 'abdefghkl'.split ''
-    delta: '|[-8+2|2]'
+    delta: '|[d8+1|2]'
   }
   {
     description: 'single forward move'
     have: 'abcdefghijkl'.split ''
     wish: 'abdefcghijkl'.split ''
-    delta: '|[!2@5]'
+    delta: '|[m2@5]'
   }
   {
     description: 'single backward move'
     have: 'abcdefghijkl'.split ''
     wish: 'abcidefghjkl'.split ''
-    delta: '|[!8@3]'
+    delta: '|[m8@3]'
   }
   {
     description: 'double block forward move '
     have: 'abcdefghijkl'.split ''
     wish: 'abefgcdhijkl'.split ''
-    # delta: '|[!2@5]'
+    delta: '|[m2+1@5]'
   }
   {
     description: 'double isolated forward move'
     have: 'abcdefghijkl'.split ''
     wish: 'abdfghcijekl'.split ''
-    # delta: '|[!2@5]'
+    delta: '|[m2@7|3@9]'
   }
   {
     description: 'double block backward move'
     have: 'abcdefghijkl'.split ''
     wish: 'abcijdefghkl'.split ''
-    # delta: '|[!8@3]'
+    delta: '|[m8+1@3]'
   }
   {
     description: 'double isolated backward move'
     have: 'abcdefghijkl'.split ''
     wish: 'abcidkefghjl'.split ''
-    # delta: '|[!8@3]'
+    delta: '|[m8@3|10@5]'
   }
   {
     description: 'double block forward exchange move'
     have: 'abcdefghijkl'.split ''
     wish: 'abefgdchijkl'.split ''
-    # delta: '|[!2@5]'
+    delta: '|[m2-1@5]'
   }
   {
     description: 'double block backward exchange move'
     have: 'abcdefghijkl'.split ''
     wish: 'abjicdefghkl'.split ''
+    delta: '|[m8-1@2]'
   }
   {
     description: 'exchange move'
     have: 'abcdefghijkl'.split ''
     wish: 'abciefghdjkl'.split ''
+    delta: '|[m8@3|4@8]'
   }
   {
     description: 'block exchange move'
     have: 'abcdefghijkl'.split ''
     wish: 'abijkfghcdel'.split ''
+    delta: '|[m8+2@2|8+2@5]'
   }
   {
     description: 'multi exchange move #1'
     have: 'abcdefghijkl'.split ''
     wish: 'abefjgckldhi'.split ''
+    delta: '|[m2@6|2@6|9@4|10+1@7]'
   }
   {
     description: 'multi exchange move #2'
     have: 'abcdefghijkl'.split ''
     wish: 'jgdhiabecklf'.split ''
+    delta: '|[m9@0|7@1|5@2|8+1@3|8@7|9@11]'
   }
   {
     description: 'reverse move'
     have: 'abcdefghijkl'.split ''
     wish: 'lkjihgfedcba'.split ''
+    delta: '|[m1-10@0]'
   }
   {
     description: 'move with duplicates'
     have: 'abcabcde'.split ''
     wish: 'ababdcec'.split ''
+    delta: '|[m2@7|5@4]'
   }
   {
     description: 'backward split delete'
     have: 'abcdefghijkl'.split ''
     wish: 'abicdefkl'.split ''
+    delta: '|[d9|6+1][m6@2]'
   }
   {
     description: 'forward split delete'
     have: 'abcdefghijkl'.split ''
     wish: 'abghijkle'.split ''
+    delta: '|[d5|2+1][m2@8]'
   }
   {
     description: 'multi delete & move'
     have: 'abcdefghijkl'.split ''
     wish: 'ajlefbc'.split ''
+    delta: '|[d10|6+2|3][m5@1|6@2|5+1@3]'
   }
   {
     description: 'single insert'
     have: 'abcdefghijkl'.split ''
     wish: 'abcdXefghijkl'.split ''
+    delta: '|[i4:X]'
   }
   {
     description: 'append'
     have: 'abcdefghijkl'.split ''
     wish: 'abcdefghijklm'.split ''
+    delta: '|[i12:m]'
   }
   {
     description: 'insert that needs quoting'
     have: 'a,b,c,d,e,f,g,h,i,j,k,l'.split ','
     wish: 'a,b,c,d,e,f,g,[],h,i,j,k,l'.split ','
+    delta: '|[i7:`a`e]'
   }
   {
     description: 'insert array'
     have: [['a'], ['c']]
     wish: [['a'], ['b'], ['c']]
+    delta: '|[i1:[b]]'
   }
   {
     description: 'double block insert'
     have: 'abcdefghijkl'.split ''
     wish: 'abcdXYefghijkl'.split ''
+    delta: '|[i4:X:Y]'
   }
   {
     description: 'double isolated insert'
     have: 'abcdefghijkl'.split ''
     wish: 'abcdXefYghijkl'.split ''
+    delta: '|[i6:Y|4:X]'
   }
   {
     description: 'multiple insert'
@@ -323,7 +339,7 @@ module.exports = [
     description: 'double replace, no diff-limit'
     have: 'abcdefghijkl'.split ''
     wish: 'abcDEfghijkl'.split ''
-    delta: '|{3:D:E}'
+    delta: '|[r3:D:E]'
   }
   {
     description: 'double replace, diff-limit = 2'
@@ -337,7 +353,7 @@ module.exports = [
     diffOptions: arrayDiffLimitGetter: -> 2
     have: 'abcdefghijkl'.split ''
     wish: 'abcDefghijkl'.split ''
-    delta: '|{3:D}'
+    delta: '|[r3:D]'
   }
   {
     description: 'replace object by custum object'

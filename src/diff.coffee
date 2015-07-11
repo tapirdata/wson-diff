@@ -37,41 +37,47 @@ class State
       connector = @differ.wsonDiff.WSON.connectorOfValue have
       diffKeys = connector?.diffKeys
 
-    delDelta = ''
+    delta = ''
     delCount = 0
     haveKeys = diffKeys or _(have).keys().sort().value()
     for key in haveKeys
       if not _.has wish, key
-        if delCount > 0
-          delDelta += '|'
-        delDelta += @stringify key
+        if delCount == 0
+          if isRoot
+            delta += '|'
+          delta += '[-'
+        else  
+          delta += '|'
+        delta += @stringify key
         ++delCount
     if delCount > 0
-      delta += '[-' + delDelta + ']'
+      delta += ']'
 
-    subDelta = ''
-    subCount = 0
+    setDelta = ''
+    setCount = 0
     wishKeys = diffKeys or _(wish).keys().sort().value()
     for key in wishKeys
       keyDelta = @getDelta have[key], wish[key]
       debug 'getObjectDelta: key=%o, keyDelta=%o', key, keyDelta
       if keyDelta?
-        if subCount > 0
-          subDelta += '|'
-        subDelta += @stringify(key) + keyDelta
-        ++subCount
-    debug 'getObjectDelta: subDelta=%o, subCount=%o', subDelta, subCount
-    if subCount > 0
-      if not isRoot
-        if subCount > 1
-          subDelta = '{' + subDelta + '}'
-        else if delCount == 0
-          subDelta = '|' + subDelta
-      delta += subDelta
+        if setCount > 0
+          setDelta += '|'
+        setDelta += @stringify(key) + keyDelta
+        ++setCount
+    debug 'getObjectDelta: setDelta=%o, setCount=%o', setDelta, setCount
+    if setCount > 0
+      if isRoot
+        if delCount == 0
+          delta += '|'
+        delta += setDelta  
+      else
+        if setCount == 1 and delCount == 0
+          delta += '|'
+          delta += setDelta
+        else  
+          delta += '[=' + setDelta + ']'
     @wishStack.pop()
     if delta.length
-      if isRoot
-        delta = '|' + delta
       return delta
     null
 
@@ -80,9 +86,8 @@ class State
     ad = new ArrayDiff @, have, wish
     if not ad.aborted
       delta = ad.getDelta()
-      if delta?
-        if isRoot
-          delta = '|' + delta
+      if isRoot and delta?
+        delta = '|' + delta
     @wishStack.pop()
     if ad.aborted
       delta = @getPlainDelta have, wish, isRoot

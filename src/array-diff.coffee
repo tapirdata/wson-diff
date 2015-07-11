@@ -411,10 +411,10 @@ class ArrayDiff
       meModOff -= modifier.doneBalance
       modifier.getDeletes meModOff, (pos, len) ->
         debug 'getDeleteDelta: pos=%o, len=%o', pos, len
-        delta += if count == 0 then '[-' else '|'
+        delta += if count == 0 then '[d' else '|'
         delta += pos
         if len != 1
-          delta += '+' + len
+          delta += '+' + (len - 1)
         ++count
     if count > 0
       delta += ']'
@@ -432,7 +432,7 @@ class ArrayDiff
       meModOff -= modifier.doneBalance
       modifier.getInserts meModOff, (havePos, wishPos, len) ->
         debug 'getInsertDelta: havePos=%o, wishPos=%o, len=%o', havePos, wishPos, len
-        delta += if count == 0 then '[+' else '|'
+        delta += if count == 0 then '[i' else '|'
         delta += havePos
         for i in [0...len]
           delta += ':' + wishIdxer.getItem wishPos + i
@@ -454,7 +454,7 @@ class ArrayDiff
     for modifier in @modifiers
       modifier.getPatches meModOff, (havePos, wishPos, len) ->
         debug 'getPatchDelta: havePos=%o, wishPos=%o, len=%o', havePos, wishPos, len
-        delta += if count == 0 then '{' else '|'
+        delta += if count == 0 then '[r' else '|'
         delta += havePos
         canChain = true
         for i in [0...len]
@@ -470,7 +470,7 @@ class ArrayDiff
         ++count
       meModOff += modifier.doneBalance
     if count > 0
-      delta += '}'
+      delta += ']'
     delta
 
 
@@ -481,11 +481,11 @@ class ArrayDiff
     for modifier in @modifiers
       modifier.getMoves meModOff, (srcPos, dstPos, len, reverse) ->
         debug 'getMoveDelta: srcPos=%o, dstPos=%o, len=%o reverse=%o', srcPos, dstPos, len, reverse
-        delta += if count == 0 then '[!' else '|'
+        delta += if count == 0 then '[m' else '|'
         delta += srcPos
         if len != 1
-          delta += '+' + len
-        delta += (if reverse then '~' else '@') + dstPos
+          delta += (if reverse then '-' else '+') + (len - 1)
+        delta += '@' + dstPos
         ++count
       meModOff += modifier.doneBalance
     if count > 0
