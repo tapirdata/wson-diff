@@ -2,7 +2,7 @@
   "name": "wson-diff",
   "version": "0.3.0",
   "description": "Object diff and patch",
-  "main": "index.js",
+  "main": "./lib",
   "scripts": {
     "test": "mocha --compilers coffee:coffee-script/register",
     "build": "rm -rf lib; coffee -c -b -o lib src",

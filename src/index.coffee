@@ -27,6 +27,14 @@ class WsonDiff
     options or= {}
     new diff.Differ @, options
 
+  diff: (have, wish, options) ->
+    differ = @createDiffer options
+    differ.diff have, wish
+
+  patch: (have, delta, options) ->
+    patcher = @createPatcher options
+    patcher.patch have, delta
+
 
 factory = (options) ->
   new WsonDiff options
