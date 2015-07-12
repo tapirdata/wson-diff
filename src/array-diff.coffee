@@ -344,7 +344,7 @@ class ArrayDiff
           [wishMdx, wishOfs] = wishKeyUse.pop()
           # debug 'setupLegs:   modifier mdx=%o leg=%o wishMdx=%o, haveOfs=%o, wishOfs=%o', modifier.mdx, leg, wishMdx, haveOfs, wishOfs
           newLeg = true
-          if leg? and wishMdx == leg.wishMdx and haveOfs == leg.haveOfs + leg.len 
+          if leg? and wishMdx == leg.wishMdx and haveOfs == leg.haveOfs + leg.len
             if leg.len == 1
               if wishOfs == leg.wishOfs + 1
                 ++leg.len

@@ -267,10 +267,10 @@ module.exports = [
         members:
           a: 'alice'.split('')
           b: 'bob'.split('')
-        contrahents: 
+        opponents:
           e: 'eve'.split('')
           m: 'mallet'.split('')
-      bar: 
+      bar:
         members:
           a: 'alice'.split('')
           b: 'bob'.split('')
@@ -279,13 +279,13 @@ module.exports = [
         members:
           a: 'Alice'.split('')
           b: 'Bob'.split('')
-        contrahents: 
+        opponents:
           e: 'Eve'.split('')
           m: 'Mallet'.split('')
-      bar: 
+      bar:
         members:
           a: 'Alice'.split('')
           b: 'Bob'.split('')
-    delta: '|bar|members[=a[r0:A]|b[r0:B]]|foo[=contrahents[=e[r0:E]|m[r0:M]]|members[=a[r0:A]|b[r0:B]]]'
+    delta: '|bar|members[=a[r0:A]|b[r0:B]]|foo[=members[=a[r0:A]|b[r0:B]]|opponents[=e[r0:E]|m[r0:M]]]'
   }
 ]

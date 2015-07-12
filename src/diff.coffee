@@ -76,7 +76,7 @@ class State
     else #scalar have
       if have == wish
         null
-      else  
+      else
         @getPlainDelta have, wish, isRoot
 
 
@@ -87,15 +87,15 @@ class Differ
     options or= {}
     @stringEdge = if options.stringEdge?
       options.stringEdge
-    else  
+    else
       wdOptions.stringEdge
     @stringLimit = if options.stringLimit?
       options.stringLimit
-    else  
+    else
       wdOptions.stringLimit
     @arrayLimit = if options.arrayLimit?
       options.arrayLimit
-    else  
+    else
       wdOptions.arrayLimit
 
   diff: (src, dst) ->

@@ -28,7 +28,7 @@ class PatchError extends errors.WsonDiffError
 reIndex = /^\d+$/
 reRange = /^(\d+)(\+(\d+))?$/
 reMove = /^(\d+)([+|-](\d+))?@(\d+)$/
-reSubst = /^(\d+)(\+(\d+))?(=(.+))?$/
+reSubst = /^(\d+)([+|-](\d+))?(=(.+))?$/
 
 SCALAR = 1
 STRING = 2
@@ -39,7 +39,7 @@ ARRAY  = 4
 class State
 
   constructor: (@delta, @pos, @target, @stage) ->
-    @scopeType = null 
+    @scopeType = null
     @currentType = null
     @pendingKey = null
     @pendingSteps = 0
@@ -132,7 +132,7 @@ class State
     @budgePending false
     try
       @target.assign @pendingKey, value
-    catch e  
+    catch e
       throw PrePatchError e
     @assignValues = null
     return
@@ -199,7 +199,7 @@ class State
     if type != expectedType
       if expectedType == ARRAY
         throw new PatchError @delta, @pos, "can't patch #{@target.get()} with array modifier"
-      else  
+      else
         throw new PatchError @delta, @pos, "can't patch #{@target.get()} with object modifier"
     @stage = stage
     @rawNext = true
@@ -253,18 +253,20 @@ class State
 
   addSubstitute: (skey) ->
     m = reSubst.exec skey
-    if not m? 
+    if not m?
       throw new PrePatchError "invalid substitution #{skey} for string #{@target.get()}"
     ofs = Number m[1]
     if m[3]?
-      len = Number(m[3]) + 1
+      lenDiff = Number m[3]
+      if m[2][0] == '-'
+        lenDiff = -lenDiff
     else
-      len = 0
+      lenDiff = 0
     if m[5]?
       str = m[5]
-    else  
+    else
       str = ''
-    @substituteValues.push [ofs, len, str]
+    @substituteValues.push [ofs, lenDiff, str]
 
   commitSubstitute: ->
     debug 'commitSubstitute insertValues=%o', @substituteValues

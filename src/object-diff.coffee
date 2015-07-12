@@ -1,7 +1,7 @@
 _ = require 'lodash'
 debug = require('debug') 'wson-diff:object-diff'
 
-class ObjectDiff  
+class ObjectDiff
 
   constructor: (@state, have, wish) ->
     if have.constructor != wish.constructor
@@ -64,7 +64,7 @@ class ObjectDiff
           delta += '[=' + setDelta + ']'
     if delta.length
       delta
-    else  
+    else
       null
 
 

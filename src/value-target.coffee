@@ -89,19 +89,20 @@ class ValueTarget extends Target
     debug 'substitute: patches=%o', patches
     have = @current
     result = ''
-    endOfs = 0 
+    endOfs = 0
     for patch in patches
-      [ofs, len, str] = patch
+      [ofs, lenDiff, str] = patch
       if ofs > endOfs
         result += have.slice endOfs, ofs
-      if str.length > 0  
+      strLen = str.length
+      if strLen > 0
         result += str
-      endOfs = ofs + len  
+      endOfs = ofs + strLen - lenDiff
       debug 'substitute: patch=%o result=%o', patch, result
     if have.length > endOfs
       result += have.slice endOfs
     debug 'substitute: result=%o', result
-    @current = result  
+    @current = result
     stack = @stack
     if stack.length == 0
       @root = result

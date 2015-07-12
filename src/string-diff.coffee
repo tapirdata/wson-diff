@@ -4,13 +4,13 @@ debug = require('debug') 'wson-diff:string-diff'
 mdiff = require 'mdiff'
 
 
-class StringDiff  
+class StringDiff
 
   constructor: (@state, have, wish) ->
     patches = []
     if have == wish
       @aborted = false
-    else  
+    else
       edge = @state.differ.stringEdge
       if wish.length < edge
         @aborted = true
@@ -24,10 +24,10 @@ class StringDiff
       if _.isFunction limit
         limit = limit(@wish)
       diffLen = mdiff(have, wish).scanDiff scanCb, limit
-      aborted = not diffLen?
+      @aborted = not diffLen?
     @patches = patches
 
-  
+
   getDelta: (isRoot) ->
     patches = @patches
     if patches.length == 0
@@ -39,12 +39,15 @@ class StringDiff
       if patchIdx > 0
         delta += '|'
       delta += ofs
-      if len > 0
-        delta += '+' + (len - 1)
+      strLen = str.length
+      if len > strLen
+        delta += '-' + (len - strLen)
+      else if len < strLen
+        delta += '+' + (strLen - len)
       if str.length > 0
         delta += '=' + WSON.escape str
-    delta += ']'    
-    delta    
+    delta += ']'
+    delta
 
 
 module.exports = StringDiff

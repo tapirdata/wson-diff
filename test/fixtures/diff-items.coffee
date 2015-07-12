@@ -100,8 +100,8 @@ module.exports = [
   }
   {
     description: 'object deep multi diff'
-    have: {foo: {members: {a: 'alice', b: 'bob'}, contrahents: {e: 'eve', m: 'mallet'}}, bar: {members: {a: 'alice', b: 'bob'}}}
-    wish: {foo: {members: {a: 'Alice', b: 'Bob'}, contrahents: {e: 'Eve', m: 'Mallet'}}, bar: {members: {a: 'Alice', b: 'Bob'}}}
+    have: {foo: {members: {a: 'alice', b: 'bob'}, opponents: {e: 'eve', m: 'mallet'}}, bar: {members: {a: 'alice', b: 'bob'}}}
+    wish: {foo: {members: {a: 'Alice', b: 'Bob'}, opponents: {e: 'Eve', m: 'Mallet'}}, bar: {members: {a: 'Alice', b: 'Bob'}}}
   }
   {
     description: 'no change'
@@ -402,10 +402,10 @@ module.exports = [
         members:
           a: 'alice'.split('')
           b: 'bob'.split('')
-        contrahents: 
+        opponents:
           e: 'eve'.split('')
           m: 'mallet'.split('')
-      bar: 
+      bar:
         members:
           a: 'alice'.split('')
           b: 'bob'.split('')
@@ -414,15 +414,70 @@ module.exports = [
         members:
           a: 'Alice'.split('')
           b: 'Bob'.split('')
-        contrahents: 
+        opponents:
           e: 'Eve'.split('')
           m: 'Mallet'.split('')
-      bar: 
+      bar:
         members:
           a: 'Alice'.split('')
           b: 'Bob'.split('')
-    delta: '|bar|members[=a[r0:A]|b[r0:B]]|foo[=contrahents[=e[r0:E]|m[r0:M]]|members[=a[r0:A]|b[r0:B]]]'
-  }       
+    delta: '|bar|members[=a[r0:A]|b[r0:B]]|foo[=members[=a[r0:A]|b[r0:B]]|opponents[=e[r0:E]|m[r0:M]]]'
+  }
+  {
+    description: 'equal strings'
+    diffOptions:
+      stringEdge: 4
+    have: 'abcdefghijklm'
+    wish: 'abcdefghijklm'
+    delta: null
+  }
+  {
+    description: 'string replace'
+    diffOptions:
+      stringEdge: 4
+    have: 'abcdefghijklm'
+    wish: 'abcDEFghIJklm'
+    delta: '|[s3=DEF|8=IJ]'
+  }
+  {
+    description: 'string insert'
+    diffOptions:
+      stringEdge: 4
+    have: 'abcdefghijklm'
+    wish: 'abcdXYZefghiUjklm'
+    delta: '|[s4+3=XYZ|9+1=U]'
+  }
+  {
+    description: 'string delete'
+    diffOptions:
+      stringEdge: 4
+    have: 'abcdefghijklm'
+    wish: 'abcghijlm'
+    delta: '|[s3-3|10-1]'
+  }
+  {
+    description: 'string move'
+    diffOptions:
+      stringEdge: 4
+    have: 'abcdefghijklm'
+    wish: 'abfhicdejklmg'
+    delta: '|[s2+3=fhi|5-4|13+1=g]'
+  }
+  {
+    description: 'string shorter than edge'
+    have: 'abcdefghijklm'
+    wish: 'abfhicdejklmg'
+    delta: 'abfhicdejklmg'
+  }
+  {
+    description: 'string with number of changes over limit'
+    diffOptions:
+      stringEdge: 4
+      stringLimit: 4
+    have: 'abcdefghijklm'
+    wish: 'abfhicdejklmg'
+    delta: 'abfhicdejklmg'
+  }
   {
     description: 'deep multi string replace'
     have:
@@ -430,10 +485,10 @@ module.exports = [
         members:
           a: 'alice'
           b: 'bob'
-        contrahents: 
+        opponents:
           e: 'eve'
           m: 'mallet'
-      bar: 
+      bar:
         members:
           a: 'alice'
           b: 'bob'
@@ -442,15 +497,15 @@ module.exports = [
         members:
           a: 'Alice'
           b: 'Bob'
-        contrahents: 
+        opponents:
           e: 'Eve'
           m: 'Mallet'
-      bar: 
+      bar:
         members:
           a: 'Alice'
           b: 'Bob'
-    delta: '|bar|members[=a:Alice|b:Bob]|foo[=contrahents[=e:Eve|m:Mallet]|members[=a:Alice|b:Bob]]'
-  }       
+    delta: '|bar|members[=a:Alice|b:Bob]|foo[=members[=a:Alice|b:Bob]|opponents[=e:Eve|m:Mallet]]'
+  }
   {
     description: 'deep multi string replace without edge'
     diffOptions:
@@ -460,10 +515,10 @@ module.exports = [
         members:
           a: 'alice'
           b: 'bob'
-        contrahents: 
+        opponents:
           e: 'eve'
           m: 'mallet'
-      bar: 
+      bar:
         members:
           a: 'alice'
           b: 'bob'
@@ -472,14 +527,14 @@ module.exports = [
         members:
           a: 'Alice'
           b: 'Bob'
-        contrahents: 
+        opponents:
           e: 'Eve'
           m: 'Mallet'
-      bar: 
+      bar:
         members:
           a: 'Alice'
           b: 'Bob'
-    delta: '|bar|members[=a[s0+0=A]|b[s0+0=B]]|foo[=contrahents[=e[s0+0=E]|m[s0+0=M]]|members[=a[s0+0=A]|b[s0+0=B]]]'      
-  }       
+    delta: '|bar|members[=a[s0=A]|b[s0=B]]|foo[=members[=a[s0=A]|b[s0=B]]|opponents[=e[s0=E]|m[s0=M]]]'
+  }
 ]
 
