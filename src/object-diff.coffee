@@ -23,9 +23,10 @@ class ObjectDiff
     if have.constructor? and have.constructor != Object
       connector = state.differ.wsonDiff.WSON.connectorOfValue have
       diffKeys = connector?.diffKeys
+    hasDiffKeys = diffKeys?  
 
     delCount = 0
-    haveKeys = diffKeys or _(have).keys().sort().value()
+    haveKeys = if hasDiffKeys then diffKeys else _(have).keys().sort().value()
     for key in haveKeys
       if not _.has wish, key
         if delCount == 0
@@ -41,8 +42,10 @@ class ObjectDiff
 
     setDelta = ''
     setCount = 0
-    wishKeys = diffKeys or _(wish).keys().sort().value()
+    wishKeys = if hasDiffKeys then diffKeys else _(wish).keys().sort().value()
     for key in wishKeys
+      if hasDiffKeys and not _.has wish, key
+        continue
       keyDelta = state.getDelta have[key], wish[key]
       debug 'getDelta: key=%o, keyDelta=%o', key, keyDelta
       if keyDelta?
