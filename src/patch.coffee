@@ -38,14 +38,14 @@ ARRAY  = 4
 
 class State
 
-  constructor: (@delta, @pos, @target, parent) ->
-    @stage = null
-    @parent = parent
-    @scopeType = @currentType = if parent then parent.getCurrentType() else null
-    @pendingSteps = 0
+  constructor: (@delta, @pos, @target, @stage) ->
+    @scopeType = null 
+    @currentType = null
     @pendingKey = null
-    @haveSteps = 0
-    @reHandle = false
+    @pendingSteps = 0
+    @targetDepth = 0
+    @scopeDepth = 0
+    @scopeStack  = []
 
   getCurrentType: ->
     type = @currentType
@@ -64,22 +64,29 @@ class State
         @scopeType = type
     type
 
-  budgePendingSteps: ->
-    if @pendingSteps > 0
-      @target.budge @pendingSteps
-      @pendingSteps = 0
-
-  budgePendingKey: ->
-    if @pendingKey?
+  budgePending: (withKey) ->
+    debug 'budgePending withKey=%o pendingSteps=%o pendingKey=%o', withKey, @pendingSteps, @pendingKey
+    if withKey and @pendingKey?
       @target.budge @pendingSteps, @pendingKey
+      @targetDepth -= @pendingSteps - 1
       @pendingSteps = 0
-      ++@haveSteps
       @currentType = null
       @pendingKey = null
+    else if @pendingSteps > 0
+      @target.budge @pendingSteps
+      @targetDepth -= @pendingSteps
+      @pendingSteps = 0
+    return
+
+  resetPath: ->
+    debug 'resetPath targetDepth=%o scopeDepth=%o', @targetDepth, @scopeDepth
+    @pendingSteps = @targetDepth - @scopeDepth
+    @pendingKey = null
+    @currentType = @scopeType
     return
 
   enterObjectKey: (key) ->
-    @budgePendingKey()
+    @budgePending true
     debug 'enterObjectKey key=%o', key
     type = @getCurrentType()
     if type != OBJECT
@@ -91,7 +98,7 @@ class State
     return
 
   enterArrayKey: (skey) ->
-    @budgePendingKey()
+    @budgePending true
     debug 'enterArrayKey skey=%o', skey
     type = @getCurrentType()
     if not reIndex.test skey
@@ -105,30 +112,24 @@ class State
     @pendingKey = key
     return
 
-  resetPath: ->
-    @pendingSteps = @haveSteps
-    @haveSteps = 0
-    @currentType = @scopeType
-    @pendingKey = null
+  pushScope: (nextStage) ->
+    debug 'pushScope scopeDepth=%o @targetDepth=%o stage=%o', @scopeDepth, @targetDepth, @stage?.name
+    @scopeStack.push [@scopeDepth, @scopeType, nextStage]
+    @scopeDepth = @targetDepth
     return
 
-  pushState: ->
-    @budgePendingKey()
-    debug 'pushState stage=%o', @stage?.name
-    new State @delta, @pos, @target, @
-
-  popState: ->
+  popScope: ->
     if not @stage.canPop
       throw new PrePatchError()
-    if not @parent?
+    scopeStack = @scopeStack
+    debug 'popScope scopeStack=%o', scopeStack
+    if scopeStack.length == 0
       throw new PrePatchError()
-    debug 'popState @haveSteps=%o', @haveSteps
-    @parent.haveSteps += @haveSteps
-    @parent.pos = @pos
-    @parent
+    [@scopeDepth, @scopeType, @stage] = scopeStack.pop()
+    return
 
   assignValue: (value) ->
-    @budgePendingSteps()
+    @budgePending false
     try
       @target.assign @pendingKey, value
     catch e  
@@ -145,20 +146,20 @@ class State
   commitReplace: ->
     debug 'commitReplace pendingKey=%o replaceValues=%o', @pendingKey, @replaceValues
     if @replaceValues?
-      @budgePendingSteps()
+      @budgePending false
       @target.replace @pendingKey, @replaceValues
       @replaceValues = null
     return
 
   doUnset: (key) ->
     debug 'doUnset key=%o', key
-    @budgePendingKey()
+    @budgePending false
     @target.unset key
     return
 
   doDelete: (skey) ->
     debug 'doDelete skey=%o', skey
-    @budgePendingKey()
+    @budgePending true
     m = reRange.exec skey
     if not m?
       throw new PrePatchError "ill-formed range '#{skey}'"
@@ -203,13 +204,14 @@ class State
     @stage = stage
     @rawNext = true
     @skipNext = 1
-    @
+    return
 
-  startModify: ->
-    debug 'startModify'
-    state = @pushState()
-    state.continueModify()
-    state
+  startModify: (nextStage) ->
+    debug 'startModify nextStage=%o', nextStage.name
+    @budgePending true
+    @pushScope nextStage
+    @continueModify()
+    return
 
   startInsert: (skey) ->
     if not reIndex.test skey
@@ -275,232 +277,234 @@ stages =
     value: (value) ->
       @enterObjectKey value
       @stage = stages.assignHasKey
-      @
+      return
     '#': (value) ->
       @enterObjectKey ''
       @stage = stages.assignHasKey
-      @
+      return
   assignHasKey:
     '|': ->
       @stage = stages.assignBegin
-      @
+      return
     ':': ->
       @rawNext = false
       @stage = stages.assignHasColon
-      @
+      return
     '[': ->
-      @stage = stages.assignHasModify
-      @startModify()
+      @startModify stages.assignHasModify
+      return
   assignHasColon:
     value: (value) ->
       @assignValue value
       @stage = stages.assignHasValue
-      @
+      return
   assignHasValue:
     '|': ->
       @resetPath()
       @stage = stages.assignBegin
-      @
+      return
     ']': ->
-      if not @parent?
+      if @scopeStack.length == 0
         throw new PrePatchError()
-      @resetPath()
+      # @resetPath()
       @stage = stages.modifyEnd
-      @
+      return
     end: ->
-      if @parent?
+      if @scopeStack.length > 0
         throw new PrePatchError()
   assignHasModify:
     '|': ->
       @resetPath()
       @stage = stages.assignBegin
-      @
+      return
     ']': ->
-      if not @parent?
+      if @scopeStack.length == 0
         throw new PrePatchError()
-      @resetPath()
+      # @resetPath()
       @stage = stages.modifyEnd
-      @
+      return
     end: ->
-      if @parent?
+      if @scopeStack.length > 0
         throw new PrePatchError()
 
   replaceBegin:
     value: (value) ->
       @enterArrayKey value
       @stage = stages.replaceHasKey
-      @
+      return
   replaceNextKey:
     value: (value) ->
       @enterObjectKey value
       @stage = stages.replaceHasKey
-      @
+      return
   replaceHasKey:
     '|': ->
       @stage = stages.replaceNextKey
-      @
+      return
     ':': ->
       @rawNext = false
       @stage = stages.replaceHasColon
       @startReplace()
-      @
+      return
     '[': ->
-      @stage = stages.replaceHasModify
-      @startModify()
+      @startModify stages.replaceHasModify
+      return
   replaceHasColon:
     value: (value) ->
       @addReplace value
       @stage = stages.replaceHasValue
-      @
+      return
   replaceHasValue:
     ':': ->
       @rawNext = false
       @stage = stages.replaceHasColon
-      @
+      return
     '|': ->
       @commitReplace()
       @resetPath()
       @stage = stages.replaceBegin
-      @
+      return
     ']': ->
       @commitReplace()
       @stage = stages.modifyEnd
-      @
+      return
   replaceHasModify:
     '|': ->
       @commitReplace()
+      @resetPath()
       @stage = stages.replaceBegin
-      @
+      return
     ']': ->
       @commitReplace()
       @stage = stages.modifyEnd
-      @
+      return
 
   unsetBegin:
     value: (value) ->
       @doUnset value
       @stage = stages.unsetHas
-      @
+      return
     '#': ->
       @doUnset ''
       @stage = stages.unsetHas
-      @
+      return
   unsetHas:
     ']': ->
       @stage = stages.modifyEnd
-      @
+      return
     '|': ->
       @stage = stages.unsetBegin
-      @
+      return
 
   deleteBegin:
     value: (value) ->
       @doDelete value
       @stage = stages.deleteHas
-      @
+      return
     '#': ->
       @doDelete ''
       @stage = stages.deleteHas
-      @
+      return
   deleteHas:
     ']': ->
       @stage = stages.modifyEnd
-      @
+      return
     '|': ->
       @stage = stages.deleteBegin
-      @
+      return
 
   insertBegin:
     value: (value) ->
       @startInsert value
       @stage = stages.insertHasKey
-      @
+      return
   insertHasKey:
     ':': ->
       @stage = stages.insertHasColon
       @rawNext = false
-      @
+      return
   insertHasColon:
     value: (value) ->
       @addInsert value
       @stage = stages.insertHasValue
-      @
+      return
   insertHasValue:
     ':': ->
       @stage = stages.insertHasColon
       @rawNext = false
-      @
+      return
     '|': ->
       @commitInsert()
       @stage = stages.insertBegin
-      @
+      return
     ']': ->
       @commitInsert()
       @stage = stages.modifyEnd
-      @
+      return
 
   moveBegin:
     value: (value) ->
       @doMove value
       @stage = stages.moveHas
-      @
+      return
   moveHas:
     ']': ->
       @stage = stages.modifyEnd
-      @
+      return
     '|': ->
       @stage = stages.moveBegin
-      @
+      return
 
   substituteBegin:
     value: (value) ->
       @startSubstitute value
       @stage = stages.substituteHas
-      @
+      return
   substituteHas:
     ']': ->
       @commitSubstitute()
       @stage = stages.modifyEnd
-      @
+      return
     '|': ->
       @stage = stages.substituteNext
-      @
+      return
   substituteNext:
     value: (value) ->
       @addSubstitute value
       @stage = stages.substituteHas
-      @
+      return
 
 
   modifyEnd:
     canPop: true
     '[': ->
+      @resetPath()
       @continueModify()
 
   patchBegin:
     value: (value) ->
       @enterObjectKey value
       @stage = stages.assignHasKey
-      @
+      return
     '#': (value) ->
       @enterObjectKey ''
       @stage = stages.assignHasKey
-      @
+      return
     '[': ->
-      @stage = stages.patchHasModify
-      @startModify()
+      @startModify stages.patchHasModify
+      return
 
   patchHasModify:
     value: (value) ->
       @enterObjectKey value
       @stage = stages.assignHasKey
-      @
+      return
     '#': (value) ->
       @enterObjectKey value
       @stage = stages.assignHasKey
-      @
+      return
     end: ->
-      if @parent?
+      if @scopeStack.length > 0
         throw new PrePatchError()
 
 do ->
@@ -520,8 +524,7 @@ class Patcher
         target.assign null, value
         return
 
-      state = new State delta, 1, target, null
-      state.stage = stages.patchBegin
+      state = new State delta, 1, target, stages.patchBegin
 
       @wsonDiff.WSON.parsePartial delta,
         howNext: [true, 1]
@@ -536,10 +539,10 @@ class Patcher
             debug 'patch: handler=%o', handler
             if handler
               break
-            state = state.popState()
+            state.popScope()
           state.rawNext = true
           state.skipNext = 0
-          state = handler.call state, value, nextPos
+          handler.call state, value, nextPos
           debug 'patch: pos=%o, rawNext=%o, skipNext=%o, stage.name=%o', state.pos, state.rawNext, state.skipNext, state.stage?.name
           state.pos = nextPos
           if state.skipNext > 0
@@ -549,13 +552,13 @@ class Patcher
             return state.rawNext
         backrefCb: (refIdx) -> target.get refIdx
 
-      debug 'patch: done: stage=%o', state.stage.name
       state.pos = delta.length
       loop
+        debug 'patch: done: stage=%o', state.stage.name
         handler = state.stage.end
         if handler
           break
-        state = state.popState()
+        state.popScope()
       handler.call state
       return
 

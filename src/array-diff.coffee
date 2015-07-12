@@ -274,9 +274,8 @@ class ArrayDiff
   constructor: (@state, have, wish) ->
     @have = have
     @wish = wish
-    @arrayDiffLimitGetter = @state.differ.arrayDiffLimitGetter
     @setupIdxers()
-    @setupModifiers()
+    @setupModifiers @state.differ.arrayLimit
     if @modifiers.length > 0
       @setupLegs()
 
@@ -290,7 +289,7 @@ class ArrayDiff
     @haveIdxer = haveIdxer
     @wishIdxer = wishIdxer
 
-  setupModifiers: ->
+  setupModifiers: (limit) ->
     haveIdxer = @haveIdxer
     wishIdxer = @wishIdxer
 
@@ -317,9 +316,10 @@ class ArrayDiff
           wishKeyUses[wishKey] = [useTo]
         ++wishOfs
 
-    diffLenLimit = @arrayDiffLimitGetter?(@wish)
+    if _.isFunction limit
+      limit = limit(@wish)
 
-    diffLen = mdiff(haveIdxer.keys, wishIdxer.keys).scanDiff scanCb, diffLenLimit
+    diffLen = mdiff(haveIdxer.keys, wishIdxer.keys).scanDiff scanCb, limit
     @aborted = not diffLen?
     @modifiers = modifiers
     @wishKeyUses = wishKeyUses
@@ -493,11 +493,11 @@ class ArrayDiff
     # @debugModifiers 'getMoveDelta done.'
     delta
 
-  getDelta: ->
+  getDelta: (isRoot) ->
     if @modifiers.length == 0
       null
     else
-      delta = ''
+      delta = if isRoot then '|' else ''
       delta += @getDeleteDelta()
       delta += @getMoveDelta()
       delta += @getInsertDelta()

@@ -304,6 +304,12 @@ module.exports = [
     wish: 'ABCDEFGHIJKL'.split ''
   }
   {
+    description: 'deep array modify'
+    have: [['a','b','c'],['e','f','g']]
+    wish: [['a','B','c'],['E','f','G']]
+    delta: '|[r0[r1:B]|1[r0:E|2:G]]'
+  }
+  {
     description: 'array of objects no change'
     have: [{a: 3}, {b: 4}, {c: 5}]
     wish: [{a: 3}, {b: 4}, {c: 5}]
@@ -341,21 +347,21 @@ module.exports = [
     delta: '|foo|a|foo:|1'
   }
   {
-    description: 'double replace, no diff-limit'
+    description: 'double replace, no limit'
     have: 'abcdefghijkl'.split ''
     wish: 'abcDEfghijkl'.split ''
     delta: '|[r3:D:E]'
   }
   {
-    description: 'double replace, diff-limit = 2'
-    diffOptions: arrayDiffLimitGetter: -> 2
+    description: 'double replace, limit=2'
+    diffOptions: arrayLimit: -> 2
     have: 'abcdefghijkl'.split ''
     wish: 'abcDEfghijkl'.split ''
     delta: '[a|b|c|D|E|f|g|h|i|j|k|l]'
   }
   {
-    description: 'single replace, diff-limit = 2'
-    diffOptions: arrayDiffLimitGetter: -> 2
+    description: 'single replace, limit=2'
+    diffOptions: arrayLimit: -> 2
     have: 'abcdefghijkl'.split ''
     wish: 'abcDefghijkl'.split ''
     delta: '|[r3:D]'
@@ -390,7 +396,7 @@ module.exports = [
     wsonClone: true
   }
   {
-    description: 'deep multi replace'
+    description: 'deep multi array replace'
     have:
       foo:
         members:
@@ -416,7 +422,64 @@ module.exports = [
           a: 'Alice'.split('')
           b: 'Bob'.split('')
     delta: '|bar|members[=a[r0:A]|b[r0:B]]|foo[=contrahents[=e[r0:E]|m[r0:M]]|members[=a[r0:A]|b[r0:B]]]'
-    noPatch: true
+  }       
+  {
+    description: 'deep multi string replace'
+    have:
+      foo:
+        members:
+          a: 'alice'
+          b: 'bob'
+        contrahents: 
+          e: 'eve'
+          m: 'mallet'
+      bar: 
+        members:
+          a: 'alice'
+          b: 'bob'
+    wish:
+      foo:
+        members:
+          a: 'Alice'
+          b: 'Bob'
+        contrahents: 
+          e: 'Eve'
+          m: 'Mallet'
+      bar: 
+        members:
+          a: 'Alice'
+          b: 'Bob'
+    delta: '|bar|members[=a:Alice|b:Bob]|foo[=contrahents[=e:Eve|m:Mallet]|members[=a:Alice|b:Bob]]'
+  }       
+  {
+    description: 'deep multi string replace without edge'
+    diffOptions:
+      stringEdge: 0
+    have:
+      foo:
+        members:
+          a: 'alice'
+          b: 'bob'
+        contrahents: 
+          e: 'eve'
+          m: 'mallet'
+      bar: 
+        members:
+          a: 'alice'
+          b: 'bob'
+    wish:
+      foo:
+        members:
+          a: 'Alice'
+          b: 'Bob'
+        contrahents: 
+          e: 'Eve'
+          m: 'Mallet'
+      bar: 
+        members:
+          a: 'Alice'
+          b: 'Bob'
+    delta: '|bar|members[=a[s0+0=A]|b[s0+0=B]]|foo[=contrahents[=e[s0+0=E]|m[s0+0=M]]|members[=a[s0+0=A]|b[s0+0=B]]]'      
   }       
 ]
 

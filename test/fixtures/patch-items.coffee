@@ -261,31 +261,31 @@ module.exports = [
     failPos: 6
     failCause: /can\'t patch .* with array modifier/
   }
-  # {
-  #   have:
-  #     foo:
-  #       members:
-  #         a: 'alice'.split('')
-  #         b: 'bob'.split('')
-  #       contrahents: 
-  #         e: 'eve'.split('')
-  #         m: 'mallet'.split('')
-  #     bar: 
-  #       members:
-  #         a: 'alice'.split('')
-  #         b: 'bob'.split('')
-  #   wish:
-  #     foo:
-  #       members:
-  #         a: 'Alice'.split('')
-  #         b: 'Bob'.split('')
-  #       contrahents: 
-  #         e: 'Eve'.split('')
-  #         m: 'Mallet'.split('')
-  #     bar: 
-  #       members:
-  #         a: 'Alice'.split('')
-  #         b: 'Bob'.split('')
-  #   delta: '|bar|members[=a[r0:A]|b[r0:B]]|foo[=contrahents[=e[r0:E]|m[r0:M]]|members[=a[r0:A]|b[r0:B]]]'
-  # }
+  {
+    have:
+      foo:
+        members:
+          a: 'alice'.split('')
+          b: 'bob'.split('')
+        contrahents: 
+          e: 'eve'.split('')
+          m: 'mallet'.split('')
+      bar: 
+        members:
+          a: 'alice'.split('')
+          b: 'bob'.split('')
+    wish:
+      foo:
+        members:
+          a: 'Alice'.split('')
+          b: 'Bob'.split('')
+        contrahents: 
+          e: 'Eve'.split('')
+          m: 'Mallet'.split('')
+      bar: 
+        members:
+          a: 'Alice'.split('')
+          b: 'Bob'.split('')
+    delta: '|bar|members[=a[r0:A]|b[r0:B]]|foo[=contrahents[=e[r0:E]|m[r0:M]]|members[=a[r0:A]|b[r0:B]]]'
+  }
 ]

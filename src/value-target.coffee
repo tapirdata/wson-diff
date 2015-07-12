@@ -11,6 +11,7 @@ class ValueTarget extends Target
   constructor: (@root) ->
     @current = @root
     @stack = []
+    @topKey = null
 
   get: (outSteps) ->
     if not outSteps? or outSteps <= 0
@@ -32,6 +33,7 @@ class ValueTarget extends Target
       stack.push current
       current = current[key]
     @current = current
+    @topKey = key
     return
 
   assign: (key, value) ->
@@ -100,8 +102,11 @@ class ValueTarget extends Target
       result += have.slice endOfs
     debug 'substitute: result=%o', result
     @current = result  
-    if @stack.length == 0
+    stack = @stack
+    if stack.length == 0
       @root = result
+    else
+      stack[stack.length - 1][@topKey] = result
 
   getRoot: -> @root
 
