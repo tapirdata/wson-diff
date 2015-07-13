@@ -8,10 +8,28 @@ module.exports = [
     delta: null
   }
   {
+    description: 'NaN'
+    have: NaN
+    wish: NaN
+    delta: null
+  }
+  {
     description: 'changes number'
     have: 43
     wish: 42
     delta: '#42'
+  }
+  {
+    description: 'equal date'
+    have: new Date 1436801234567
+    wish: new Date 1436801234567
+    delta: null
+  }
+  {
+    description: 'changed date'
+    have: new Date 1436801234567
+    wish: new Date 1436801234568
+    delta: '#d1436801234568'
   }
   {
     description: 'object to number'

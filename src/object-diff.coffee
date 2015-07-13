@@ -1,6 +1,9 @@
 _ = require 'lodash'
 debug = require('debug') 'wson-diff:object-diff'
 
+
+hasOwnProperty = Object::hasOwnProperty
+
 class ObjectDiff
 
   constructor: (@state, have, wish) ->
@@ -28,7 +31,7 @@ class ObjectDiff
     delCount = 0
     haveKeys = if hasDiffKeys then diffKeys else _(have).keys().sort().value()
     for key in haveKeys
-      if not _.has wish, key
+      if not hasOwnProperty.call wish, key
         if delCount == 0
           if isRoot
             delta += '|'
@@ -44,7 +47,7 @@ class ObjectDiff
     setCount = 0
     wishKeys = if hasDiffKeys then diffKeys else _(wish).keys().sort().value()
     for key in wishKeys
-      if hasDiffKeys and not _.has wish, key
+      if hasDiffKeys and not hasOwnProperty.call wish, key
         continue
       keyDelta = state.getDelta have[key], wish[key]
       debug 'getDelta: key=%o, keyDelta=%o', key, keyDelta

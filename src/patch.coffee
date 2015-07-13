@@ -1,4 +1,3 @@
-_ = require 'lodash'
 debug = require('debug') 'wson-diff:patch'
 wson = require 'wson'
 
@@ -30,39 +29,31 @@ reRange = /^(\d+)(\+(\d+))?$/
 reMove = /^(\d+)([+|-](\d+))?@(\d+)$/
 reSubst = /^(\d+)([+|-](\d+))?(=(.+))?$/
 
-SCALAR = 1
-STRING = 2
-OBJECT = 3
-ARRAY  = 4
+TI_STRING = 20
+TI_ARRAY  = 24
+TI_OBJECT = 32
 
 
 class State
 
-  constructor: (@delta, @pos, @target, @stage) ->
-    @scopeType = null
-    @currentType = null
+  constructor: (@WSON, @delta, @pos, @target, @stage) ->
+    @scopeTi = null
+    @currentTi = null
     @pendingKey = null
     @pendingSteps = 0
     @targetDepth = 0
     @scopeDepth = 0
     @scopeStack  = []
 
-  getCurrentType: ->
-    type = @currentType
-    if not type?
+  getCurrentTi: ->
+    ti = @currentTi
+    if not ti?
       value = @target.get 0
-      type = if _.isArray value
-        ARRAY
-      else if _.isObject value
-        OBJECT
-      else if _.isString value
-        STRING
-      else
-        SCALAR
-      @currentType = type
+      ti = @WSON.getTypeid value
+      @currentTi = ti
       if @haveSteps == 0
-        @scopeType = type
-    type
+        @scopeTi = ti
+    ti
 
   budgePending: (withKey) ->
     debug 'budgePending withKey=%o pendingSteps=%o pendingKey=%o', withKey, @pendingSteps, @pendingKey
@@ -70,7 +61,7 @@ class State
       @target.budge @pendingSteps, @pendingKey
       @targetDepth -= @pendingSteps - 1
       @pendingSteps = 0
-      @currentType = null
+      @currentTi = null
       @pendingKey = null
     else if @pendingSteps > 0
       @target.budge @pendingSteps
@@ -82,15 +73,15 @@ class State
     debug 'resetPath targetDepth=%o scopeDepth=%o', @targetDepth, @scopeDepth
     @pendingSteps = @targetDepth - @scopeDepth
     @pendingKey = null
-    @currentType = @scopeType
+    @currentTi = @scopeTi
     return
 
   enterObjectKey: (key) ->
     @budgePending true
     debug 'enterObjectKey key=%o', key
-    type = @getCurrentType()
-    if type != OBJECT
-      if type == ARRAY
+    ti = @getCurrentTi()
+    if ti != TI_OBJECT
+      if ti == TI_ARRAY
         throw new PrePatchError "can't index array #{@target.get()} with object index #{key}"
       else
         throw new PrePatchError "can't index scalar #{@target.get()}"
@@ -100,12 +91,12 @@ class State
   enterArrayKey: (skey) ->
     @budgePending true
     debug 'enterArrayKey skey=%o', skey
-    type = @getCurrentType()
+    ti = @getCurrentTi()
     if not reIndex.test skey
       throw new PrePatchError "non-numeric array index #{skey} for #{@target.get()}"
     key = Number skey
-    if type != ARRAY
-      if type == OBJECT
+    if ti != TI_ARRAY
+      if ti == TI_OBJECT
         throw new PrePatchError "can't index object #{@target.get()} with array index #{key}"
       else
         throw new PrePatchError "can't index scalar #{@target.get()}"
@@ -114,7 +105,7 @@ class State
 
   pushScope: (nextStage) ->
     debug 'pushScope scopeDepth=%o @targetDepth=%o stage=%o', @scopeDepth, @targetDepth, @stage?.name
-    @scopeStack.push [@scopeDepth, @scopeType, nextStage]
+    @scopeStack.push [@scopeDepth, @scopeTi, nextStage]
     @scopeDepth = @targetDepth
     return
 
@@ -125,7 +116,7 @@ class State
     debug 'popScope scopeStack=%o', scopeStack
     if scopeStack.length == 0
       throw new PrePatchError()
-    [@scopeDepth, @scopeType, @stage] = scopeStack.pop()
+    [@scopeDepth, @scopeTi, @stage] = scopeStack.pop()
     return
 
   assignValue: (value) ->
@@ -170,34 +161,34 @@ class State
 
   continueModify: ->
     c = @delta[++@pos]
-    type = @getCurrentType()
+    ti = @getCurrentTi()
     debug 'coninueModify c=%o', c
     switch c
       when '='
-        expectedType = OBJECT
+        expectedTi = TI_OBJECT
         stage = stages.assignBegin
       when '-'
-        expectedType = OBJECT
+        expectedTi = TI_OBJECT
         stage = stages.unsetBegin
       when 'd'
-        expectedType = ARRAY
+        expectedTi = TI_ARRAY
         stage = stages.deleteBegin
       when 'i'
-        expectedType = ARRAY
+        expectedTi = TI_ARRAY
         stage = stages.insertBegin
       when 'm'
-        expectedType = ARRAY
+        expectedTi = TI_ARRAY
         stage = stages.moveBegin
       when 'r'
-        expectedType = ARRAY
+        expectedTi = TI_ARRAY
         stage = stages.replaceBegin
       when 's'
-        expectedType = STRING
+        expectedTi = TI_STRING
         stage = stages.substituteBegin
       else
         throw new PrePatchError()
-    if type != expectedType
-      if expectedType == ARRAY
+    if ti != expectedTi
+      if expectedTi == TI_ARRAY
         throw new PatchError @delta, @pos, "can't patch #{@target.get()} with array modifier"
       else
         throw new PatchError @delta, @pos, "can't patch #{@target.get()} with object modifier"
@@ -526,7 +517,7 @@ class Patcher
         target.assign null, value
         return
 
-      state = new State delta, 1, target, stages.patchBegin
+      state = new State @wsonDiff.WSON, delta, 1, target, stages.patchBegin
 
       @wsonDiff.WSON.parsePartial delta,
         howNext: [true, 1]

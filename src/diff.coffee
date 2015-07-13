@@ -1,4 +1,3 @@
-_ = require 'lodash'
 debug = require('debug') 'wson-diff:diff'
 
 StringDiff = require './string-diff'
@@ -58,26 +57,34 @@ class State
     delta
 
   getDelta: (have, wish, isRoot) ->
-    if _.isArray have
-      if _.isArray wish
-        @getArrayDelta have, wish, isRoot
-      else
-        @getPlainDelta have, wish, isRoot
-    else if _.isObject have
-      if not _.isArray(wish) and _.isObject(wish)
-        @getObjectDelta have, wish, isRoot
-      else
-        @getPlainDelta have, wish, isRoot
-    else if _.isString have
-      if _.isString wish
-        @getStringDelta have, wish, isRoot
-      else
-        @getPlainDelta have, wish, isRoot
-    else #scalar have
-      if have == wish
-        null
-      else
-        @getPlainDelta have, wish, isRoot
+    WSON = @differ.wsonDiff.WSON
+    haveTi = WSON.getTypeid have
+    wishTi = WSON.getTypeid wish
+    if wishTi != haveTi
+      @getPlainDelta have, wish, isRoot
+    else
+      switch haveTi
+        when 8 # Number
+          if have == wish or (have != have and wish != wish) # NaN
+            null
+          else
+            @getPlainDelta have, wish, isRoot
+        when 16 # Date
+          if have.valueOf() == wish.valueOf()
+            null
+          else
+            @getPlainDelta have, wish, isRoot
+        when 20 # String
+          @getStringDelta have, wish, isRoot
+        when 24 # Array
+          @getArrayDelta have, wish, isRoot
+        when 32 # Object
+          @getObjectDelta have, wish, isRoot
+        else    
+          if have == wish
+            null
+          else
+            @getPlainDelta have, wish, isRoot
 
 
 class Differ

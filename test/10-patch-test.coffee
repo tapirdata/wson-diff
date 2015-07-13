@@ -27,11 +27,11 @@ saveRepr = (x) ->
 
 for setup in require './fixtures/setups'
   describe setup.name, ->
-    wDiff = wsonDiff setup.options
+    WDIF = wsonDiff setup.options
     describe 'patch', ->
       for item in items
         do (item) ->
-          patcher = wDiff.createPatcher()
+          patcher = WDIF.createPatcher item.patchOptions
           have = _.cloneDeep item.have
           if item.failPos?
             it "should fail to patch #{saveRepr have} with '#{item.delta}' @#{item.failPos}.", ->

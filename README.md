@@ -8,7 +8,7 @@ $ npm install wson-diff
 ```
 
 ```js
-wd = require('wson-diff')();
+WDIF = require('wson-diff')();
 
 var have = {
   name: "otto",
@@ -26,11 +26,11 @@ var wish = {
   message: 'My hovercraft is full of eels!'
 };
 
-var delta = wd.diff(have, wish);
+var delta = WDIF.diff(have, wish);
 console.log('delta="%s"', delta);
 // delta="|active:#f|completed[m3@2][i4:lisp][r1:coffeescript]|message[s29=!]|name:rudi|size:#177.4"
 
-var result = wd.patch(have, delta);
+var result = WDIF.patch(have, delta);
 console.log('result="%j"', result);
 // Now result (and have) is deep equal to wish.
 ```
