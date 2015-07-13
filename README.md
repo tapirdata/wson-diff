@@ -153,6 +153,12 @@ Examples:
 | `[2, 3, 5, 7, 11, 13]`  | `[2, 5, 7, 11, 13]`     | [d1]             | Delete one entry at index 1 |
 | `[2, 3, 5, 7, 11, 13]`  | `[3, 5, 13]`            | [d0\|2+1]        | Delete one entry at index 0. From the resulting array delete 2 entries (one + 1) at index 2 |
 
+##### Insert
+
+- **kind character**: 'i'
+- **item**: an index followed by one or more WSON-strings, each prefixed by a ':'
+- Semantics: Insert ore more entries from the array.
+
 
 
 
