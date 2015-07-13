@@ -511,6 +511,8 @@ class Patcher
 
   patchTarget: (target, delta) ->
     debug 'patch: target=%o, delta=%o', target, delta
+    if not delta?
+      return
     try
       if delta[0] != '|'
         value = @wsonDiff.WSON.parse delta
