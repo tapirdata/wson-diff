@@ -35,6 +35,11 @@ class WsonDiff
     patcher = @createPatcher options
     patcher.patch have, delta
 
+  patchTarget: (target, delta, options) ->
+    patcher = @createPatcher options
+    patcher.patchTarget target, delta
+
+
 
 factory = (options) ->
   new WsonDiff options

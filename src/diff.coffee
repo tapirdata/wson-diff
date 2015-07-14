@@ -80,7 +80,7 @@ class State
           @getArrayDelta have, wish, isRoot
         when 32 # Object
           @getObjectDelta have, wish, isRoot
-        else    
+        else
           if have == wish
             null
           else

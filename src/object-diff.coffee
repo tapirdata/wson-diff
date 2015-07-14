@@ -26,7 +26,7 @@ class ObjectDiff
     if have.constructor? and have.constructor != Object
       connector = state.differ.wsonDiff.WSON.connectorOfValue have
       diffKeys = connector?.diffKeys
-    hasDiffKeys = diffKeys?  
+    hasDiffKeys = diffKeys?
 
     delCount = 0
     haveKeys = if hasDiffKeys then diffKeys else _(have).keys().sort().value()

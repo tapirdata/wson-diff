@@ -29,6 +29,7 @@ reRange = /^(\d+)(\+(\d+))?$/
 reMove = /^(\d+)([+|-](\d+))?@(\d+)$/
 reSubst = /^(\d+)([+|-](\d+))?(=(.+))?$/
 
+TI_UNKNOW = 0
 TI_STRING = 20
 TI_ARRAY  = 24
 TI_OBJECT = 32
@@ -48,11 +49,15 @@ class State
   getCurrentTi: ->
     ti = @currentTi
     if not ti?
-      value = @target.get 0
-      ti = @WSON.getTypeid value
-      @currentTi = ti
-      if @haveSteps == 0
-        @scopeTi = ti
+      target = @target
+      if target.get?
+        value = target.get 0
+        ti = @WSON.getTypeid value
+        @currentTi = ti
+        if @haveSteps == 0
+          @scopeTi = ti
+      else
+        ti = TI_UNKNOW
     ti
 
   budgePending: (withKey) ->
@@ -80,7 +85,7 @@ class State
     @budgePending true
     debug 'enterObjectKey key=%o', key
     ti = @getCurrentTi()
-    if ti != TI_OBJECT
+    if ti != TI_UNKNOW and ti != TI_OBJECT
       if ti == TI_ARRAY
         throw new PrePatchError "can't index array #{@target.get()} with object index #{key}"
       else
@@ -95,7 +100,7 @@ class State
     if not reIndex.test skey
       throw new PrePatchError "non-numeric array index #{skey} for #{@target.get()}"
     key = Number skey
-    if ti != TI_ARRAY
+    if ti != TI_UNKNOW and ti != TI_ARRAY
       if ti == TI_OBJECT
         throw new PrePatchError "can't index object #{@target.get()} with array index #{key}"
       else
@@ -116,6 +121,7 @@ class State
     debug 'popScope scopeStack=%o', scopeStack
     if scopeStack.length == 0
       throw new PrePatchError()
+    @target.modified?()
     [@scopeDepth, @scopeTi, @stage] = scopeStack.pop()
     return
 
@@ -187,7 +193,7 @@ class State
         stage = stages.substituteBegin
       else
         throw new PrePatchError()
-    if ti != expectedTi
+    if ti != TI_UNKNOW and ti != expectedTi
       if expectedTi == TI_ARRAY
         throw new PatchError @delta, @pos, "can't patch #{@target.get()} with array modifier"
       else
@@ -206,7 +212,7 @@ class State
 
   startInsert: (skey) ->
     if not reIndex.test skey
-      throw new PrePatchError "non-numeric index #{skey} for array #{@target.get()}"
+      throw new PrePatchError "non-numeric index #{skey} for array #{@target.get?()}"
     @insertKey = Number skey
     @insertValues = []
     return
@@ -245,7 +251,7 @@ class State
   addSubstitute: (skey) ->
     m = reSubst.exec skey
     if not m?
-      throw new PrePatchError "invalid substitution #{skey} for string #{@target.get()}"
+      throw new PrePatchError "invalid substitution #{skey} for string #{@target.get?()}"
     ofs = Number m[1]
     if m[3]?
       lenDiff = Number m[3]
@@ -299,7 +305,6 @@ stages =
     ']': ->
       if @scopeStack.length == 0
         throw new PrePatchError()
-      # @resetPath()
       @stage = stages.modifyEnd
       return
     end: ->
@@ -313,7 +318,6 @@ stages =
     ']': ->
       if @scopeStack.length == 0
         throw new PrePatchError()
-      # @resetPath()
       @stage = stages.modifyEnd
       return
     end: ->
@@ -545,7 +549,10 @@ class Patcher
             return [state.rawNext, state.skipNext]
           else
             return state.rawNext
-        backrefCb: (refIdx) -> target.get refIdx
+        backrefCb: if target.get?
+          (refIdx) -> target.get refIdx
+        else
+          null
 
       state.pos = delta.length
       loop

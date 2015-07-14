@@ -36,6 +36,11 @@ class ValueTarget extends Target
     @topKey = key
     return
 
+  unset: (key) ->
+    debug 'unset: key=%o, @current=%o', key, @current
+    delete @current[key]
+    return
+
   assign: (key, value) ->
     debug 'assign: key=%o, value=%o', key, value
     if key?
@@ -46,44 +51,39 @@ class ValueTarget extends Target
       @root = @current
     return
 
-  unset: (key) ->
-    debug 'unset: key=%o, @current=%o', key, @current
-    delete @current[key]
+  delete: (idx, len) ->
+    debug 'delete: idx=%o, len=%o @current=%o', idx, len, @current
+    current = @current
+    current.splice idx, len
     return
 
-  replace: (key, values) ->
-    debug 'assign: key=%o, values=%o', key, values
+  move: (srcIdx, dstIdx, len, reverse) ->
+    debug 'move: srcIdx=%o dstIdx=%o len=%o reverse=%o', srcIdx, dstIdx, len, reverse
+    current = @current
+    chunk = current.splice srcIdx, len
+    if reverse
+      chunk.reverse()
+    current.splice.apply current, [dstIdx, 0].concat chunk
+
+  insert: (idx, values) ->
+    current = @current
+    current.splice.apply current, [idx, 0].concat values
+    return
+
+  replace: (idx, values) ->
+    debug 'assign: idx=%o, values=%o', idx, values
     valuesLen = values.length
     if valuesLen == 0
       return
     current = @current
     valuesIdx = 0
     loop
-      current[key] = values[valuesIdx]
+      current[idx] = values[valuesIdx]
       if ++valuesIdx == valuesLen
         break
       else
-        ++key
+        ++idx
     return
-
-  delete: (key, len) ->
-    debug 'delete: key=%o, len=%o @current=%o', key, len, @current
-    current = @current
-    current.splice key, len
-    return
-
-  insert: (key, values) ->
-    current = @current
-    current.splice.apply current, [key, 0].concat values
-    return
-
-  move: (srcKey, dstKey, len, reverse) ->
-    debug 'move: srcKey=%o dstKey=%o len=%o reverse=%o', srcKey, dstKey, len, reverse
-    current = @current
-    chunk = current.splice srcKey, len
-    if reverse
-      chunk.reverse()
-    current.splice.apply current, [dstKey, 0].concat chunk
 
   substitute: (patches) ->
     debug 'substitute: patches=%o', patches
@@ -110,7 +110,6 @@ class ValueTarget extends Target
       stack[stack.length - 1][@topKey] = result
 
   getRoot: -> @root
-
 
 
 

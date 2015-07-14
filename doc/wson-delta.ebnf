@@ -26,12 +26,12 @@ move-modifier ::= '[r' move-item ( '|'  move-item )* ']'
 substitute-item ::= natural ( ( ( '+' | '-' ) natural )? ( '=' wson-string )? )
 substitute-modifier ::= '[s' substitute-item ( '|'  substitute-item )* ']'
 
-modifier ::= unset-modifier | assign-modifier 
-           | delete-modifier | insert-modifier | replace-modifier | move-modifier 
+modifier ::= unset-modifier | assign-modifier
+           | delete-modifier | insert-modifier | replace-modifier | move-modifier
            | substitute-modifier
 
 path-delta ::= assignment | path modifier ( '|' modifier )*
 plain-delta ::= value
-real-delta ::= '|' ( modifier+ ('|' assign-delta)* | assign-delta ('|' assign-delta )+ )
+real-delta ::= '|' ( modifier+ | assign-delta) ('|' assign-delta)*
 delta ::= plain-delta | real-delta
 
