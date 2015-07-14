@@ -53,6 +53,10 @@ Examples:
 <a name="plain-delta"></a>
 ### Plain delta
 
+```ebnf
+plain delta ::= wson
+```
+
 Any WSON-string is a **plain delta**. Its semantics is: Ignore `have`, just use the WSON-stringified delta as the result.
 
 A Plain delta will be produced for **scalars** (every **string**, **array**, or **object** except `Date`, which _are_ **scalars**) and if `have` and `wish` have different types.

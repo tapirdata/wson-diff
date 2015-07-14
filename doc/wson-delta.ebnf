@@ -1,0 +1,37 @@
+value ::= wson
+key ::= wson-string
+natural ::= '0' | [1-9] [0-9]*
+
+path ::= key ( '|' key )*
+assignment ::= path ':' value
+
+unset-item ::= key
+unset-modifier ::= '[-' unset-item ( '|'  unset-item )* ']'
+
+assign-item ::= path-delta
+assign-modifier ::= '[=' assign-item ( '|'  assign-item )* ']'
+
+delete-item ::= natural ( '+' natural )?
+delete-modifier-delta ::= '[d' delete-item ( '|'  delete-item )* ']'
+
+insert-item ::= natural ( ( ':' value )+ | '|' path-delta )
+insert-modifier ::= '[i' insert-item ( '|'  insert-item )* ']'
+
+replace-item ::= natural ( ( ':' value )+ )
+replace-modifier ::= '[r' replace-item ( '|'  replace-item )* ']'
+
+move-item ::= natural ( ( ( '+' | '-' ) natural )? '@' natural )
+move-modifier ::= '[r' move-item ( '|'  move-item )* ']'
+
+substitute-item ::= natural ( ( ( '+' | '-' ) natural )? ( '=' wson-string )? )
+substitute-modifier ::= '[s' substitute-item ( '|'  substitute-item )* ']'
+
+modifier ::= unset-modifier | assign-modifier 
+           | delete-modifier | insert-modifier | replace-modifier | move-modifier 
+           | substitute-modifier
+
+path-delta ::= assignment | path modifier ( '|' modifier )*
+plain-delta ::= value
+real-delta ::= '|' ( modifier+ ('|' assign-delta)* | assign-delta ('|' assign-delta )+ )
+delta ::= plain-delta | real-delta
+
