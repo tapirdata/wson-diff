@@ -21,7 +21,7 @@ replace-item ::= natural ( ( ':' value )+ )
 replace-modifier ::= '[r' replace-item ( '|'  replace-item )* ']'
 
 move-item ::= natural ( ( ( '+' | '-' ) natural )? '@' natural )
-move-modifier ::= '[r' move-item ( '|'  move-item )* ']'
+move-modifier ::= '[m' move-item ( '|'  move-item )* ']'
 
 substitute-item ::= natural ( ( ( '+' | '-' ) natural )? ( '=' wson-string )? )
 substitute-modifier ::= '[s' substitute-item ( '|'  substitute-item )* ']'
