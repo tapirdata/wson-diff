@@ -69,7 +69,7 @@ class State
       @currentTi = null
       @pendingKey = null
     else if @pendingSteps > 0
-      @target.budge @pendingSteps
+      @target.budge @pendingSteps, null
       @targetDepth -= @pendingSteps
       @pendingSteps = 0
     return
@@ -121,7 +121,6 @@ class State
     debug 'popScope scopeStack=%o', scopeStack
     if scopeStack.length == 0
       throw new PrePatchError()
-    @target.modified?()
     [@scopeDepth, @scopeTi, @stage] = scopeStack.pop()
     return
 
@@ -521,47 +520,47 @@ class Patcher
       if delta[0] != '|'
         value = @wsonDiff.WSON.parse delta
         target.assign null, value
-        return
-
-      state = new State @wsonDiff.WSON, delta, 1, target, stages.patchBegin
-
-      @wsonDiff.WSON.parsePartial delta,
-        howNext: [true, 1]
-        cb: (isValue, value, nextPos) ->
-          loop
-            stage = state.stage
-            debug 'patch: stage=%o, isValue=%o, value=%o, nextPos=%o', stage.name, isValue, value, nextPos
-            if isValue
-              handler = stage.value
+      else  
+        state = new State @wsonDiff.WSON, delta, 1, target, stages.patchBegin
+        @wsonDiff.WSON.parsePartial delta,
+          howNext: [true, 1]
+          cb: (isValue, value, nextPos) ->
+            loop
+              stage = state.stage
+              debug 'patch: stage=%o, isValue=%o, value=%o, nextPos=%o', stage.name, isValue, value, nextPos
+              if isValue
+                handler = stage.value
+              else
+                handler = stage[value]
+              debug 'patch: handler=%o', handler
+              if handler
+                break
+              state.popScope()
+            state.rawNext = true
+            state.skipNext = 0
+            handler.call state, value, nextPos
+            debug 'patch: pos=%o, rawNext=%o, skipNext=%o, stage.name=%o', state.pos, state.rawNext, state.skipNext, state.stage?.name
+            state.pos = nextPos
+            if state.skipNext > 0
+              state.pos += state.skipNext
+              return [state.rawNext, state.skipNext]
             else
-              handler = stage[value]
-            debug 'patch: handler=%o', handler
-            if handler
-              break
-            state.popScope()
-          state.rawNext = true
-          state.skipNext = 0
-          handler.call state, value, nextPos
-          debug 'patch: pos=%o, rawNext=%o, skipNext=%o, stage.name=%o', state.pos, state.rawNext, state.skipNext, state.stage?.name
-          state.pos = nextPos
-          if state.skipNext > 0
-            state.pos += state.skipNext
-            return [state.rawNext, state.skipNext]
+              return state.rawNext
+          backrefCb: if target.get?
+            (refIdx) -> target.get refIdx
           else
-            return state.rawNext
-        backrefCb: if target.get?
-          (refIdx) -> target.get refIdx
-        else
-          null
+            null
 
-      state.pos = delta.length
-      loop
-        debug 'patch: done: stage=%o', state.stage.name
-        handler = state.stage.end
-        if handler
-          break
-        state.popScope()
-      handler.call state
+        state.pos = delta.length
+        loop
+          debug 'patch: done: stage=%o', state.stage.name
+          handler = state.stage.end
+          if handler
+            break
+          state.popScope()
+        handler.call state
+
+      target.done()
       return
 
     catch error
@@ -572,8 +571,8 @@ class Patcher
       else
         throw error
 
-  patch: (value, delta) ->
-    target = new ValueTarget value
+  patch: (value, delta, notifier) ->
+    target = new ValueTarget value, notifier
     @patchTarget target, delta
     target.getRoot()
 

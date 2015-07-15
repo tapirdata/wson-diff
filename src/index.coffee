@@ -33,7 +33,7 @@ class WsonDiff
 
   patch: (have, delta, options) ->
     patcher = @createPatcher options
-    patcher.patch have, delta
+    patcher.patch have, delta, options?.notifier
 
   patchTarget: (target, delta, options) ->
     patcher = @createPatcher options
