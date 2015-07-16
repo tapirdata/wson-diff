@@ -1,5 +1,5 @@
 # wson-diff [![Build Status](https://secure.travis-ci.org/tapirdata/wson-diff.png?branch=master)](https://travis-ci.org/tapirdata/wson-diff) [![Dependency Status](https://david-dm.org/tapirdata/wson-diff.svg)](https://david-dm.org/tapirdata/wson-diff) [![devDependency Status](https://david-dm.org/tapirdata/wson-diff/dev-status.svg)](https://david-dm.org/tapirdata/wson-diff#info=devDependencies)
->  A differ/patcher for arbitrary values that presents delta in a terse WSON-like format.
+>  A differ/patcher for arbitrary values that presents delta in a terse [WSON](https://www.npmjs.com/package/wson)-like format.
 
 ## Usage
 
@@ -8,7 +8,7 @@ $ npm install wson-diff
 ```
 
 ```js
-wdif = require('wson-diff')();
+wdiff = require('wson-diff')();
 
 var have = {
   name: "otto",
@@ -26,15 +26,16 @@ var wish = {
   message: 'My hovercraft is full of eels!'
 };
 
-var delta = wdif.diff(have, wish);
+var delta = wdiff.diff(have, wish);
 console.log('delta="%s"', delta);
 // delta="|active:#f|completed[m3@2][i4:lisp][r1:coffeescript]|message[s29=!]|name:rudi|size:#177.4"
 
-var result = wdif.patch(have, delta);
+var result = wdiff.patch(have, delta);
 console.log('result="%j"', result);
 // Now result (and have) is deep equal to wish.
 ```
 
+<a name="delta"></a>
 ## Delta
 
 This is an informal description of the Delta-Syntax. There is also an EBNF-file in the doc-directory and a [syntax-diagram](http://tapirdata.github.io/wson-diff/doc/wson-delta.xhtml) created from it.
@@ -134,7 +135,6 @@ Examples:
 
 Examples:
 
-Examples:
 | `have`                       | `wish`                      |  `delta`           |
 |------------------------------|-----------------------------|--------------------|
 | `{foo: {a: 3, b: 4, c: 5}}`  | `{foo: {a: 4, b: 3, c: 5}}` | \|foo[=a:#4\|b:#3] |
@@ -247,14 +247,79 @@ Examples (with `stringEdge: 0`):
 | `'full of my eels'`       | `'full of eels'`          | [s8-3]              | pure deletion      |
 | `'my hovercraft'`         | `'hover my craft'`        | [s0-3\|8+4= my ]    | delete and insert  |
 
+### Custom-objects
+
+The underlying WSON-processor may be created with `connectors` to support [custom objects](https://www.npmjs.com/package/wson#custom-objects). Then if a `diff` has to compare **objects**, it looks if there is matching **connector**. If one is found and has a array-property `keys`, these keys are take in account for comparison (otherwise deltas for all own-properties of `have` and `wish` are created). You can use to protect internal state from leaking into the **delta**. 
+
+---
+#### Complex Examples
+
+| `have`                      | `wish`                      |  `delta`                 | Explanation        |
+|-----------------------------|-----------------------------|--------------------------|--------------------|
+| {foo: {a: [1, 2]}}          | {foo: {a: [1, 2, 3]}}       | \|foo\|a[i2:#3]          |                    |
+| {foo: {a: [1, 2]}}          | {bar: {a: [1, 2]}}          | \|[-foo]bar:{a:[#1\|#2]} | sorry, no renaming |
+| {foo: {a: [1, 2]}}          | {foo: {a: 1, b: 1}}         | \|foo[=a:#1\|b:#1]       | assign modifier    |
+| [{a: 'alice'}, {b: 'bob'}]  | [{a: 'eve'}, {b: 'bob'}]    | \|[r0\|a:eve]            |                    |
+
+
+<a name="notifier"></a>
+## Notifiers
+
+Be that you are not only interested in in the result of patching some value by a **delta**, but want to update some related structure - say a DOM-tree - accordingly. This task can be accomplished by passing `patch` a **notifier**, that should provide the following interface:
+
+```js
+{
+  checkedBudge: function(up, key, current) {},
+  unset: function(key, current) {},
+  assign: function(key, value, current) {},
+  "delete": function(idx, len, current) {},
+  move: function(srcIdx, dstIdx, len, reverse, current) {},
+  insert: function(idx, values, current) {},
+  replace: function(idx, values, current) {},
+  substitute: function(patches, current) {}
+}
+```
+A notifier is assumed to to hold some **cursor** that could be manipulated by calling `checkedBudge`: `up` is a number >= 0 that says how many levels we want to go up. If `key` is not `null` it is a numeric array-index or a string object-key. Then the **cursor** should be moved into the item that is indicated by `key`. If a `key` is provided (or for a first extra call with `up=0, key=null`), `checkedBudge` may return `false` to signal a [cut](#notify-cut). Inititally the **cursor** refers to the root-value (The `have` that is passed to `patch`).
+
+The other methods just resemble the parsed [modifiers](#modifier). For convenience the current value (that one the **cursor** refers to, before apllying the modification) is passed as an additional argument `current`.
+
+`assign` may be called with or without `key`. If `key` is `null`, the item under the **cursor** is expected to be replaced. Otherwise the item referred by this `key` is expected to be set or replaced.
+
+<a name="notify-cut"></a>
+### Cut
+
+To finer tailor the amount of notification `checkedBudge` may return `false`. Then all modifications for the value reached by `key` will be collected and notified by a single call of `assign` (without a `current` argument). E.g. if `checkedBudge` returns `false` whenever `current` happens to be a string, a [substitute-delta](#substitute-delta) will never have `substitute` be called but results in the same call of `assign` as if there had been a [plain-delta](plain-plain) for this string.
+
+
+<a name="api"></a>
 ## API
 
-#### var wdif = wson-diff(options)
+#### var wdiff = wson-diff(options)
 
-Creates a new diff/patch processor.  Recognized options are:
+Creates a new diff/patch processor.
+
+Recognized options:
 - `WSON`: a [WSON](https://www.npmjs.com/package/wson)-processor.
-- `wsonOptions`: if no `WSON` is provided, create one with this options.
+- `wsonOptions`: If no `WSON` is provided, create one with this options.
+
+Other options are handed to `diff`.
+
+#### var delta = wdiff.diff(have, wish, options)
+
+Returns `null` if `have` and `wish` are deep equal. Otherwise returns the string `delta`. 
+
+Recognized options:
+- `arrayLimit` (integer or function, default: `null`): If the number of differences between some `have-array` and some `wish-array` exceeds this limit, a [plain-delta](#plain-delta) will be created instead of a list of [modifiers](#modifier). A [move](#move-modifier) will count as twice it's length. This is to limit the amount of time used to find the minimal set of changes by the underlying [mdiff](https://www.npmjs.com/package/mdiff). If `arrayLimit` is a function, it will applied to `(have-array, wish-array)` to return the limit dynamically.
+
+- `stringLimit` (integer or function, default: `null`): If the number of differences between some `have-string` and some `wish-string` exceeds this limit, a [plain-delta](#plain-delta) will be created instead of a [substitute-modifier](#substitute-modifier). Every deleted or inserted character count as one change. If `stringLimit` is a function, it will applied to `(have-string, wish-string)` to return the limit dynamically.
+
+- `stringEdge` (integer, default: 16): If some `wish-string` is shorter than this limit, a [plain-delta](#plain-delta) will be created instead of a [substitute-modifier](#substitute-modifier). 
+
+#### var result = wdiff.patch(have, delta, options)
+
+Returns the result of applying `delta` to `have`. If possible, `have` will be changed in place.
+
+Recognized options:
+- `notifier`: a [notifier](#notifier), that receives all applied changes.
 
 
-
-to be continued...

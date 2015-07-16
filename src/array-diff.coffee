@@ -317,7 +317,7 @@ class ArrayDiff
         ++wishOfs
 
     if _.isFunction limit
-      limit = limit(@wish)
+      limit = limit(@have, @wish)
 
     diffLen = mdiff(haveIdxer.keys, wishIdxer.keys).scanDiff scanCb, limit
     @aborted = not diffLen?

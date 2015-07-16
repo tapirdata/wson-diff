@@ -82,50 +82,52 @@ class ValueTarget extends Target
 
   unset: (key) ->
     debug 'unset(key=%o) @current=%o', key, @current
-    delete @current[key]
     if not @notifyDepth?
-      @notifier.unset key
+      @notifier.unset key, @current
+    delete @current[key]
     return
 
   assign: (key, value) ->
     debug 'assign(key=%o value=%o)', key, value
-    @put_ key, value
     if not @notifyDepth?
-      @notifier.assign key, value
+      @notifier.assign key, value, @current
+    @put_ key, value
     return
 
   delete: (idx, len) ->
     debug 'delete(idx=%o len=%o) @current=%o', idx, len, @current
     current = @current
-    current.splice idx, len
     if not @notifyDepth?
-      @notifier.delete idx, len
+      @notifier.delete idx, len, current
+    current.splice idx, len
     return
 
   move: (srcIdx, dstIdx, len, reverse) ->
     debug 'move(srcIdx=%o dstIdx=%o len=%o reverse=%o)', srcIdx, dstIdx, len, reverse
     current = @current
+    if not @notifyDepth?
+      @notifier.move srcIdx, dstIdx, len, reverse, current
     chunk = current.splice srcIdx, len
     if reverse
       chunk.reverse()
     current.splice.apply current, [dstIdx, 0].concat chunk
-    if not @notifyDepth?
-      @notifier.move srcIdx, dstIdx, len, reverse
     return
 
   insert: (idx, values) ->
     current = @current
-    current.splice.apply current, [idx, 0].concat values
     if not @notifyDepth?
-      @notifier.insert idx, values
+      @notifier.insert idx, values, current
+    current.splice.apply current, [idx, 0].concat values
     return
 
   replace: (idx, values) ->
-    debug 'assign(idx=%o, values=%o)', idx, values
+    debug 'replace(idx=%o, values=%o)', idx, values
     valuesLen = values.length
     if valuesLen == 0
       return
     current = @current
+    if not @notifyDepth?
+      @notifier.replace idx, values, current
     valuesIdx = 0
     loop
       current[idx] = values[valuesIdx]
@@ -133,30 +135,28 @@ class ValueTarget extends Target
         break
       else
         ++idx
-    if not @notifyDepth?
-      @notifier.replace idx, values
     return
 
   substitute: (patches) ->
     debug 'substitute(patches=%o)', patches
-    have = @current
+    current = @current
     result = ''
     endOfs = 0
+    if not @notifyDepth?
+      @notifier.substitute patches, current
     for patch in patches
       [ofs, lenDiff, str] = patch
       if ofs > endOfs
-        result += have.slice endOfs, ofs
+        result += current.slice endOfs, ofs
       strLen = str.length
       if strLen > 0
         result += str
       endOfs = ofs + strLen - lenDiff
       debug 'substitute: patch=%o result=%o', patch, result
-    if have.length > endOfs
-      result += have.slice endOfs
+    if current.length > endOfs
+      result += current.slice endOfs
     debug 'substitute: result=%o', result
     @put_ null, result
-    if not @notifyDepth?
-      @notifier.substitute patches
     return
 
   done: ->

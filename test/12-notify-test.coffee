@@ -69,12 +69,12 @@ class Notifier
 
 for setup in require './fixtures/setups'
   describe setup.name, ->
-    wdif = wsonDiff setup.options
+    wdiff = wsonDiff setup.options
     describe 'notify', ->
       for item in items
         do (item) ->
           debug 'patch: have=%o, delta=%o', item.have, item.delta
-          patcher = wdif.createPatcher item.patchOptions
+          patcher = wdiff.createPatcher item.patchOptions
           notifier = new Notifier item.budgeTest
           describe item.description, ->
             it "should patch #{saveRepr item.have} with '#{item.delta}' notify #{saveRepr item.nfys}.", ->

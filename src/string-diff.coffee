@@ -22,7 +22,7 @@ class StringDiff
 
       limit = @state.differ.stringLimit
       if _.isFunction limit
-        limit = limit(@wish)
+        limit = limit have wish
       diffLen = mdiff(have, wish).scanDiff scanCb, limit
       @aborted = not diffLen?
     @patches = patches

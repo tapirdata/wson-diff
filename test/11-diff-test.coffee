@@ -29,12 +29,12 @@ saveRepr = (x) ->
 
 for setup in require './fixtures/setups'
   describe setup.name, ->
-    wdif = wsonDiff setup.options
+    wdiff = wsonDiff setup.options
     describe 'diff', ->
       for item in items
         do (item) ->
-          differ = wdif.createDiffer item.diffOptions
-          patcher = wdif.createPatcher item.patchOptions
+          differ = wdiff.createDiffer item.diffOptions
+          patcher = wdiff.createPatcher item.patchOptions
           delta = differ.diff item.have, item.wish
           debug 'diff: have=%o, wish=%o, delta=%o', item.have, item.wish, delta
           describe item.description, ->
@@ -44,7 +44,7 @@ for setup in require './fixtures/setups'
             if delta?
               if not item.noPatch
                 if item.wsonClone
-                  have = wdif.WSON.parse wdif.WSON.stringify item.have # do a real deep clone (with constructors)
+                  have = wdiff.WSON.parse wdiff.WSON.stringify item.have # do a real deep clone (with constructors)
                 else
                   have = _.cloneDeep item.have
                 got = patcher.patch have, delta
