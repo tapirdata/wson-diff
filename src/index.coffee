@@ -15,8 +15,6 @@ class WsonDiff
     if not WSON?
       WSON = wson options.wsonOptions
     @WSON = WSON
-    if not options.stringEdge?
-      options.stringEdge = 16
     @options = options
 
   createPatcher: (options) ->

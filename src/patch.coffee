@@ -526,7 +526,7 @@ class Patcher
       if delta[0] != '|'
         value = @wsonDiff.WSON.parse delta
         target.assign null, value
-      else  
+      else
         state = new State @wsonDiff.WSON, delta, 1, target, stages.patchBegin
         @wsonDiff.WSON.parsePartial delta,
           howNext: [true, 1]
@@ -578,7 +578,7 @@ class Patcher
         throw error
 
   patch: (value, delta, notifier) ->
-    target = new ValueTarget value, notifier
+    target = new ValueTarget @wsonDiff.WSON, value, notifier
     @patchTarget target, delta
     target.getRoot()
 

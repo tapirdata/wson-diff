@@ -46,8 +46,8 @@ class Notifier
     path = @keyStack
     if key?
       path.concat [key]
-    else 
-      _.clone path  
+    else
+      _.clone path
 
   unset: (key) ->
     @nfys.push ['unset', @fullPath(key)]

@@ -249,7 +249,7 @@ Examples (with `stringEdge: 0`):
 
 ### Custom-objects
 
-The underlying WSON-processor may be created with `connectors` to support [custom objects](https://www.npmjs.com/package/wson#custom-objects). Then if a `diff` has to compare **objects**, it looks if there is matching **connector**. If one is found and has a array-property `keys`, these keys are take in account for comparison (otherwise deltas for all own-properties of `have` and `wish` are created). You can use to protect internal state from leaking into the **delta**. 
+The underlying WSON-processor may be created with `connectors` to support [custom objects](https://www.npmjs.com/package/wson#custom-objects). Then if a `diff` has to compare **objects**, it looks if there is matching **connector**. If one is found and has a array-property `keys`, these keys are take in account for comparison (otherwise deltas for all own-properties of `have` and `wish` are created). You can use to protect internal state from leaking into the **delta**.
 
 ---
 #### Complex Examples
@@ -306,14 +306,14 @@ Other options are handed to `diff`.
 
 #### var delta = wdiff.diff(have, wish, options)
 
-Returns `null` if `have` and `wish` are deep equal. Otherwise returns the string `delta`. 
+Returns `null` if `have` and `wish` are deep equal. Otherwise returns the string `delta`.
 
 Recognized options:
 - `arrayLimit` (integer or function, default: `null`): If the number of differences between some `have-array` and some `wish-array` exceeds this limit, a [plain-delta](#plain-delta) will be created instead of a list of [modifiers](#modifier). A [move](#move-modifier) will count as twice it's length. This is to limit the amount of time used to find the minimal set of changes by the underlying [mdiff](https://www.npmjs.com/package/mdiff). If `arrayLimit` is a function, it will applied to `(have-array, wish-array)` to return the limit dynamically.
 
 - `stringLimit` (integer or function, default: `null`): If the number of differences between some `have-string` and some `wish-string` exceeds this limit, a [plain-delta](#plain-delta) will be created instead of a [substitute-modifier](#substitute-modifier). Every deleted or inserted character count as one change. If `stringLimit` is a function, it will applied to `(have-string, wish-string)` to return the limit dynamically.
 
-- `stringEdge` (integer, default: 16): If some `wish-string` is shorter than this limit, a [plain-delta](#plain-delta) will be created instead of a [substitute-modifier](#substitute-modifier). 
+- `stringEdge` (integer, default: 16): If some `wish-string` is shorter than this limit, a [plain-delta](#plain-delta) will be created instead of a [substitute-modifier](#substitute-modifier).
 
 #### var result = wdiff.patch(have, delta, options)
 

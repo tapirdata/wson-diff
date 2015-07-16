@@ -12,6 +12,7 @@ connectors =
     postcreate: (foo, args) ->
       extdefs.Foo.call foo, args[2], args[1], args[0]
     diffKeys: ['y', 'x']
+    postpatch: -> @setupArea()
 
 module.exports = [
   {

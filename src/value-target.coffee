@@ -8,7 +8,7 @@ Target = require './target'
 
 class ValueTarget extends Target
 
-  constructor: (root, notifier) ->
+  constructor: (@WSON, root, notifier) ->
     @root = root
     @current = root
     @stack = []
@@ -33,6 +33,21 @@ class ValueTarget extends Target
         stack[stack.length - 1][@topKey] = value
     return
 
+  closeObjects_: (tillIdx) ->
+    value = @current
+    stack = @stack
+    idx = stack.length
+    loop
+      debug 'closeObjects_ %o', value
+      if typeof value == 'object' and value.constructor? and value.constructor != Object
+        connector = @WSON.connectorOfValue value
+        debug 'closeObjects_ connector=%o', connector
+        connector?.postpatch?.call value
+      if --idx < tillIdx
+        break
+      value = stack[idx]
+    return
+
   get: (up) ->
     if not up? or up <= 0
       @current
@@ -47,6 +62,7 @@ class ValueTarget extends Target
     notifyDepth = @notifyDepth
     if up > 0
       newLen = stack.length - up
+      @closeObjects_ newLen + 1
       if notifyDepth?
         notifyUp = notifyDepth - newLen
         if notifyUp > 0
@@ -170,6 +186,7 @@ class ValueTarget extends Target
       else
         stack[notifyDepth]
       @notifier.assign null, notifyValue
+    @closeObjects_ 0
     return
 
   getRoot: -> @root

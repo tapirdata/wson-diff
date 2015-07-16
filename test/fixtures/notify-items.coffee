@@ -61,5 +61,5 @@ module.exports = [
       ['assign', [], {foo: {a: 'eve', b: 'bob'}, bar: {a: 'mallet', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}]
     ]
   }
-]  
+]
 

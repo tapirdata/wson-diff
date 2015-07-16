@@ -94,8 +94,10 @@ class Differ
     options or= {}
     @stringEdge = if options.stringEdge?
       options.stringEdge
-    else
+    else if wdOptions.stringEdge?
       wdOptions.stringEdge
+    else
+      16
     @stringLimit = if options.stringLimit?
       options.stringLimit
     else

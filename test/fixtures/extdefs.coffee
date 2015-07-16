@@ -9,7 +9,12 @@ class Polygon
   constructor: (@points=[]) ->
 
 class Foo
-  constructor: (@x, @y, @dummy) ->
+  constructor: (@x, @y, @area) ->
+    @setupArea()
+
+  setupArea: ->
+    @area = @x * @y
+
 
 
 exports.Point = Point

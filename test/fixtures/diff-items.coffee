@@ -399,18 +399,10 @@ module.exports = [
     wsonClone: true
   }
   {
-    description: 'replace patch custum object with diffKeys'
-    have: {a: new extdefs.Foo(3, 4, 5)}
-    wish: {a: new extdefs.Foo(3, 14, 5)}
-    delta: '|a|y:#14'
-    wsonClone: true
-  }
-  {
     description: 'replace patch custum object with diffKeys; ignore changed attribute'
-    have: {a: new extdefs.Foo(3, 4, 5)}
-    wish: {a: new extdefs.Foo(3, 14, 15)}
+    have: {a: new extdefs.Foo(3, 4)}
+    wish: {a: new extdefs.Foo(3, 14)}
     delta: '|a|y:#14'
-    noPatch: true
     wsonClone: true
   }
   {
