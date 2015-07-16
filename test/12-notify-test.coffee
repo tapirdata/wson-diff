@@ -33,11 +33,11 @@ class Notifier
     @nfys = []
     @keyStack = []
 
-  budge: (outSteps, key) ->
-    # console.log 'budge', outSteps, key
+  checkedBudge: (up, key) ->
+    # console.log 'checkedBudge', up, key
     keyStack = @keyStack
-    if outSteps > 0
-      keyStack.splice keyStack.length - outSteps
+    if up > 0
+      keyStack.splice keyStack.length - up
     if key?
       keyStack.push key
     @budgeTest.apply @, _(keyStack).reverse().value()

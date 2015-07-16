@@ -16,7 +16,7 @@ class ValueTarget extends Target
     @notifier = notifier
     @notifyDepth = if not notifier?
       -1 # never assign
-    else if notifier.budge 0, null
+    else if false == notifier.checkedBudge 0, null, @current
       0 # assign root
     else
       null
@@ -29,27 +29,27 @@ class ValueTarget extends Target
       stack = @stack
       if stack.length == 0
         @root = @current
-      else  
+      else
         stack[stack.length - 1][@topKey] = value
-    return    
+    return
 
-  get: (outSteps) ->
-    if not outSteps? or outSteps <= 0
+  get: (up) ->
+    if not up? or up <= 0
       @current
     else
       stack = @stack
-      stack[stack.length - outSteps]
+      stack[stack.length - up]
 
-  budge: (outSteps, key) ->
-    debug 'budge(outSteps=%o key=%o) notifyDepth=%o', outSteps, key, @notifyDepth
+  budge: (up, key) ->
+    debug 'budge(up=%o key=%o) notifyDepth=%o', up, key, @notifyDepth
     debug 'budge: stack=%o current=%o', @stack, @current
     stack = @stack
     notifyDepth = @notifyDepth
-    if outSteps > 0
-      newLen = stack.length - outSteps
+    if up > 0
+      newLen = stack.length - up
       if notifyDepth?
-        notifyOutSteps = notifyDepth - newLen
-        if notifyOutSteps > 0
+        notifyUp = notifyDepth - newLen
+        if notifyUp > 0
           notifyValue = if notifyDepth == stack.length
             @current
           else
@@ -57,24 +57,24 @@ class ValueTarget extends Target
           @notifier.assign null, notifyValue
           notifyDepth = null
         else
-          notifyOutSteps = 0
+          notifyUp = 0
       else
-        notifyOutSteps = outSteps
+        notifyUp = up
       current = stack[newLen]
       stack.splice newLen
     else
       current = @current
-      notifyOutSteps = 0
-    debug 'budge: notifyOutSteps=%o', notifyOutSteps 
+      notifyUp = 0
+    debug 'budge: notifyUp=%o', notifyUp
     if key?
       stack.push current
       current = current[key]
       if not notifyDepth?
-        if @notifier.budge notifyOutSteps, key
+        if false == @notifier.checkedBudge notifyUp, key, @current
           notifyDepth = @stack.length
-    else if notifyOutSteps > 0  
-      @notifier.budge notifyOutSteps, null
-    debug 'budge: ->notifyDepth=%o', notifyDepth 
+    else if notifyUp > 0
+      @notifier.checkedBudge notifyUp, null, @current
+    debug 'budge: ->notifyDepth=%o', notifyDepth
     @notifyDepth = notifyDepth
     @current = current
     @topKey = key

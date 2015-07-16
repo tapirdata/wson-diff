@@ -2,8 +2,8 @@ debug = require('debug') 'wson-diff:target'
 
 class Target
 
-  get: (outSteps) ->
-  budge: (outSteps, key) ->
+  get: (up) ->
+  budge: (up, key) ->
 
   unset: (key) ->
   assign: (key, value) ->

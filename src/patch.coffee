@@ -41,7 +41,7 @@ class State
     @scopeTi = null
     @currentTi = null
     @pendingKey = null
-    @pendingSteps = 0
+    @pendingUp = 0
     @targetDepth = 0
     @scopeDepth = 0
     @scopeStack  = []
@@ -54,29 +54,29 @@ class State
         value = target.get 0
         ti = @WSON.getTypeid value
         @currentTi = ti
-        if @haveSteps == 0
+        if @haveUp == 0
           @scopeTi = ti
       else
         ti = TI_UNKNOW
     ti
 
   budgePending: (withKey) ->
-    debug 'budgePending withKey=%o pendingSteps=%o pendingKey=%o', withKey, @pendingSteps, @pendingKey
+    debug 'budgePending withKey=%o pendingUp=%o pendingKey=%o', withKey, @pendingUp, @pendingKey
     if withKey and @pendingKey?
-      @target.budge @pendingSteps, @pendingKey
-      @targetDepth -= @pendingSteps - 1
-      @pendingSteps = 0
+      @target.budge @pendingUp, @pendingKey
+      @targetDepth -= @pendingUp - 1
+      @pendingUp = 0
       @currentTi = null
       @pendingKey = null
-    else if @pendingSteps > 0
-      @target.budge @pendingSteps, null
-      @targetDepth -= @pendingSteps
-      @pendingSteps = 0
+    else if @pendingUp > 0
+      @target.budge @pendingUp, null
+      @targetDepth -= @pendingUp
+      @pendingUp = 0
     return
 
   resetPath: ->
     debug 'resetPath targetDepth=%o scopeDepth=%o', @targetDepth, @scopeDepth
-    @pendingSteps = @targetDepth - @scopeDepth
+    @pendingUp = @targetDepth - @scopeDepth
     @pendingKey = null
     @currentTi = @scopeTi
     return
@@ -193,10 +193,16 @@ class State
       else
         throw new PrePatchError()
     if ti != TI_UNKNOW and ti != expectedTi
-      if expectedTi == TI_ARRAY
-        throw new PatchError @delta, @pos, "can't patch #{@target.get()} with array modifier"
-      else
-        throw new PatchError @delta, @pos, "can't patch #{@target.get()} with object modifier"
+      expectedName = switch expectedTi
+        when TI_ARRAY
+          'array'
+        when TI_OBJECT
+          'object'
+        when TI_STRING
+          'string'
+        else
+          'scalar'
+      throw new PatchError @delta, @pos, "can't patch #{@target.get()} with #{expectedName} modifier"
     @stage = stage
     @rawNext = true
     @skipNext = 1

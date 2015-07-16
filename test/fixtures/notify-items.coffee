@@ -23,7 +23,7 @@ module.exports = [
     have: {foo: {a: 'alice', b: 'bob'}, bar: {a: 'alice', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}
     delta: '|foo|a:eve'
     budgeTest: (top) ->
-      top == 'foo'
+      top != 'foo'
     nfys: [
       ['assign', ['foo'], {a: 'eve', b: 'bob'}]
     ]
@@ -34,7 +34,7 @@ module.exports = [
     delta: '|foo|a:eve'
     budgeTest: (top) ->
       # console.log 'bt', [].splice arguments
-      true
+      false
     nfys: [
       ['assign', [], {foo: {a: 'eve', b: 'bob'}, bar: {a: 'alice', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}]
     ]
@@ -44,7 +44,7 @@ module.exports = [
     have: {foo: {a: 'alice', b: 'bob'}, bar: {a: 'alice', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}
     delta: '|bar|a:mallet|foo|a:eve'
     budgeTest: (top) ->
-      top == 'foo' or top == 'bar'
+      top != 'foo' and top != 'bar'
     nfys: [
       ['assign', ['bar'], {a: 'mallet', b: 'bob'}]
       ['assign', ['foo'], {a: 'eve', b: 'bob'}]
@@ -56,7 +56,7 @@ module.exports = [
     delta: '|bar|a:mallet|foo|a:eve'
     budgeTest: (top) ->
       # console.log 'bt', [].splice arguments
-      true
+      false
     nfys: [
       ['assign', [], {foo: {a: 'eve', b: 'bob'}, bar: {a: 'mallet', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}]
     ]
