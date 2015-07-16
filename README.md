@@ -1,5 +1,15 @@
 # wson-diff [![Build Status](https://secure.travis-ci.org/tapirdata/wson-diff.png?branch=master)](https://travis-ci.org/tapirdata/wson-diff) [![Dependency Status](https://david-dm.org/tapirdata/wson-diff.svg)](https://david-dm.org/tapirdata/wson-diff) [![devDependency Status](https://david-dm.org/tapirdata/wson-diff/dev-status.svg)](https://david-dm.org/tapirdata/wson-diff#info=devDependencies)
->  A differ/patcher for arbitrary values that presents delta in a terse [WSON](https://www.npmjs.com/package/wson)-like format.
+>  A differ/patcher for arbitrary values that presents delta in a terse WSON-like format.
+
+[WSON](https://www.npmjs.com/package/wson) can be used to stringify structured data, transmit that string to some receiver, where it can be parsed to reconstruct that original data. Now both ends posses that identical data. If now that data happens to change a little, why should we retransmit that whole redundant information? This is where wson-diff comes in:
+
+1. Generate a [delta](#delta) by either:
+  - applying `diff` to your old value `have` and the current `wish`.
+  - manually build up this **delta**.
+2. Send the **delta** over the wire.
+3. On the receiver end: Apply that **delta** to the value `have` in being. Optionally:
+ - Use a [notifier](#notifier) to update some dependent (DOM?) - structure.
+
 
 ## Usage
 
@@ -112,7 +122,7 @@ A **path-delta** is an [assignments](#assignment) or a [path](#path) followed by
 <a name="object-modifier"></a>
 #### Object Modifiers
 
-There are two **modifiers** that operate on an **object**: [unset](#unset-modifier), and [assign](#assign-modifier):
+There are two **modifiers** that operate on an **object**: [unset](#unset-modifier), and [assign](#assign-modifier). Deltas of **objects** are created by deep comparing all own properties of these objects. See also: [Custom Objects](#custom-objects)
 
 <a name="unset-modifier"></a>
 ##### Unset Modifier
@@ -247,9 +257,12 @@ Examples (with `stringEdge: 0`):
 | `'full of my eels'`       | `'full of eels'`          | [s8-3]              | pure deletion      |
 | `'my hovercraft'`         | `'hover my craft'`        | [s0-3\|8+4= my ]    | delete and insert  |
 
-### Custom-objects
+<a name="custom-objects"></a>
+### Custom Objects
 
-The underlying WSON-processor may be created with `connectors` to support [custom objects](https://www.npmjs.com/package/wson#custom-objects). Then if a `diff` has to compare **objects**, it looks if there is matching **connector**. If one is found and has a array-property `keys`, these keys are take in account for comparison (otherwise deltas for all own-properties of `have` and `wish` are created). You can use to protect internal state from leaking into the **delta**.
+The underlying WSON-processor may be created with `connectors` to support [custom objects](https://www.npmjs.com/package/wson#custom-objects). These **conectectors** can be augmented for wson-diff with these extra properties:
+- `key` (array): Instead of looking at all own properties `diff` just compares the properties referred by these keys. Thus you can hide private properties from **delta**.
+- `postpatch` (function): This function - if present - will be called (bound to the current object) after all patches have been applied. Thus you can update private properties thereafter.
 
 ---
 #### Complex Examples
