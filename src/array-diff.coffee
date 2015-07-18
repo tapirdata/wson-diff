@@ -280,12 +280,10 @@ class ArrayDiff
       @setupLegs()
 
   setupIdxers: ->
-    haveIdxer = new Idxer @state, @have
-    wishIdxer = new Idxer @state, @wish, haveIdxer.allString
+    haveIdxer = new Idxer @state, @have, true, true
+    wishIdxer = new Idxer @state, @wish, false, haveIdxer.allString
     if haveIdxer.allString and not wishIdxer.allString
-      haveIdxer = new Idxer @state, @have, false
-    # debug 'setupIdxers: have keys=%o allString=%o', haveIdxer.keys, haveIdxer.allString
-    # debug 'setupIdxers: wish keys=%o allString=%o', wishIdxer.keys, wishIdxer.allString
+      haveIdxer = new Idxer @state, @have, true, false
     @haveIdxer = haveIdxer
     @wishIdxer = wishIdxer
 

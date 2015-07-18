@@ -8,17 +8,18 @@ class State
 
   constructor: (@differ) ->
     @wishStack = []
+    @haveStack = []
 
-  stringify: (val) ->
-    debug 'stringify val=%o wishStack=%o', val, @wishStack
-    wishStack = @wishStack
+  stringify: (val, useHave) ->
+    stack = if useHave then @haveStack else @wishStack
+    debug 'stringify val=%o stack=%o', val, stack
     @differ.wdiff.WSON.stringify val, haverefCb: (backVal) ->
       debug 'stringify:   backVal=%o', backVal
-      for wish, idx in wishStack
+      for wish, idx in stack
         debug 'stringify:     wish=%o, idx=%o', wish, idx
         if wish == backVal
           debug 'stringify:   found.'
-          return wishStack.length - idx - 1
+          return stack.length - idx - 1
       null
 
   getPlainDelta: (have, wish, isRoot) ->
@@ -38,9 +39,11 @@ class State
 
   getObjectDelta: (have, wish, isRoot) ->
     @wishStack.push wish
+    @haveStack.push have
     diff = new ObjectDiff @, have, wish
     if not diff.aborted
       delta = diff.getDelta isRoot
+    @haveStack.pop()
     @wishStack.pop()
     if diff.aborted
       delta = @getPlainDelta have, wish, isRoot
@@ -48,9 +51,11 @@ class State
 
   getArrayDelta: (have, wish, isRoot) ->
     @wishStack.push wish
+    @haveStack.push have
     diff = new ArrayDiff @, have, wish
     if not diff.aborted
       delta = diff.getDelta isRoot
+    @haveStack.pop()
     @wishStack.pop()
     if diff.aborted
       delta = @getPlainDelta have, wish, isRoot

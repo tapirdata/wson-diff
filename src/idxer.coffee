@@ -1,30 +1,21 @@
+debug = require('debug') 'wson-diff:idxer'
 _ = require 'lodash'
 
 class Idxer
 
-  constructor: (@state, vals, allString=true) ->
-    # console.log 'Idxer allString=%s', allString
+  constructor: (@state, vals, useHave, allString) ->
     if allString
-      # uses = {}
       for val, idx in vals
         if not _.isString val
           allString = false
           break
-        # use = uses[val]
-        # if not use?
-        #   uses[val] = use = []
-        # use.push idx
       keys = vals
     if not allString
-      # uses = {}
       keys = new Array vals.length
       for val, idx in vals
-        key = @state.stringify val
+        key = @state.stringify val, useHave
         keys[idx] = key
-        # use = uses[key]
-        # if not use?
-        #   uses[key] = use = []
-        # use.push idx
+      debug 'keys=%o', keys  
     @keys = keys
     @allString = allString
 
@@ -34,7 +25,6 @@ class Idxer
       @state.stringify key
     else
       key
-
 
 
 module.exports = Idxer

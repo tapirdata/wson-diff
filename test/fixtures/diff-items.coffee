@@ -365,6 +365,12 @@ module.exports = [
     delta: '|foo|a|foo:|1'
   }
   {
+    description: 'move circular array reference'
+    have: do -> x = [1, 2, 3, null]; x[3] = x; x
+    wish: do -> x = [null, 1, 2, 3]; x[0] = x; x
+    delta: '|[m3@0]'
+  }
+  {
     description: 'double replace, no limit'
     have: 'abcdefghijkl'.split ''
     wish: 'abcDEfghijkl'.split ''

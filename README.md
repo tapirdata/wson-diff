@@ -5,15 +5,15 @@
 
 1. Generate a [delta](#delta) by either:
   - Call `diff` with your old value `have` and the current `wish`.
-  - Manually build up this **delta**.
+  - Manually build up this [delta](#delta).
 2. Send the **delta** over the wire.
 3. On the receiver end: Call `patch` to apply that **delta** to the value `have` in being.
 
 ### Features
 - `diff` uses [mdiff](https://www.npmjs.com/package/mdiff) to find minimal changes of **arrays** and **strings**. For arrays this changes are further boiled down to deletes, moves, inserts and replaces.
-- `patch` can use [notifiers](#notifier) to forward changes to update some dependent (DOM?)-structure.
-
-
+- `patch` can use [notifiers](#notifier) to forward changes to some dependent (DOM?)-structure.
+- Extends WSONs support cyclic structures and [custom objects](#custom-objects).
+- Provides a terse syntax for **delta** by using the "gaps" of WSON-syntax (no extra special characters).
 
 ## Usage
 

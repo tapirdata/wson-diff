@@ -8,6 +8,13 @@
     "build": "rm -rf lib; coffee -c -b -o lib src",
     "prepublish": "npm run build"
   },
+  "keywords": [
+    "WSON",
+    "diff",
+    "patch",
+    "delta",
+    "extensible"
+  ],
   "author": {
     "name": "Andreas Riedl",
     "email": "office@tapirdata.com",
