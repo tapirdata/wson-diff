@@ -4,8 +4,8 @@ module.exports = [
     description:  'plain delta'
     have:  null
     delta: 'foo'
-    budgeTest: ->
-    nfys: [
+    budgeTest0: ->
+    nfys0: [
       ['assign', [], 'foo']
     ]
   }
@@ -13,8 +13,8 @@ module.exports = [
     description:  'deep delta detailed'
     have: {foo: {a: 'alice', b: 'bob'}, bar: {a: 'alice', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}
     delta: '|foo|a:eve'
-    budgeTest: ->
-    nfys: [
+    budgeTest0: ->
+    nfys0: [
       ['assign', ['foo', 'a'], 'eve']
     ]
   }
@@ -22,9 +22,8 @@ module.exports = [
     description:  'deep delta till "foo"'
     have: {foo: {a: 'alice', b: 'bob'}, bar: {a: 'alice', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}
     delta: '|foo|a:eve'
-    budgeTest: (top) ->
-      top != 'foo'
-    nfys: [
+    budgeTest0: (top) -> top != 'foo'
+    nfys0: [
       ['assign', ['foo'], {a: 'eve', b: 'bob'}]
     ]
   }
@@ -32,10 +31,8 @@ module.exports = [
     description:  'deep delta till null'
     have: {foo: {a: 'alice', b: 'bob'}, bar: {a: 'alice', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}
     delta: '|foo|a:eve'
-    budgeTest: (top) ->
-      # console.log 'bt', [].splice arguments
-      false
-    nfys: [
+    budgeTest0: (top) -> false
+    nfys0: [
       ['assign', [], {foo: {a: 'eve', b: 'bob'}, bar: {a: 'alice', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}]
     ]
   }
@@ -43,9 +40,8 @@ module.exports = [
     description:  'multi deep delta till foo'
     have: {foo: {a: 'alice', b: 'bob'}, bar: {a: 'alice', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}
     delta: '|bar|a:mallet|foo|a:eve'
-    budgeTest: (top) ->
-      top != 'foo' and top != 'bar'
-    nfys: [
+    budgeTest0: (top) -> top != 'foo' and top != 'bar'
+    nfys0: [
       ['assign', ['bar'], {a: 'mallet', b: 'bob'}]
       ['assign', ['foo'], {a: 'eve', b: 'bob'}]
     ]
@@ -54,10 +50,22 @@ module.exports = [
     description:  'multi deep delta till null'
     have: {foo: {a: 'alice', b: 'bob'}, bar: {a: 'alice', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}
     delta: '|bar|a:mallet|foo|a:eve'
-    budgeTest: (top) ->
-      # console.log 'bt', [].splice arguments
-      false
-    nfys: [
+    budgeTest0: (top) -> false
+    nfys0: [
+      ['assign', [], {foo: {a: 'eve', b: 'bob'}, bar: {a: 'mallet', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}]
+    ]
+  }
+  {
+    description:  'multi deep delta with two notifiers'
+    have: {foo: {a: 'alice', b: 'bob'}, bar: {a: 'alice', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}
+    delta: '|bar|a:mallet|foo|a:eve'
+    budgeTest0: (top) -> top != 'foo' and top != 'bar'
+    budgeTest1: (top) -> false
+    nfys0: [
+      ['assign', ['bar'], {a: 'mallet', b: 'bob'}]
+      ['assign', ['foo'], {a: 'eve', b: 'bob'}]
+    ]
+    nfys1: [
       ['assign', [], {foo: {a: 'eve', b: 'bob'}, bar: {a: 'mallet', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}]
     ]
   }

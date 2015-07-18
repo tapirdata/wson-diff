@@ -3,6 +3,7 @@ wson = require 'wson'
 
 errors = require './errors'
 ValueTarget = require './value-target'
+NotifierTarget = require './notifier-target'
 
 class PrePatchError extends errors.WsonDiffError
   name: 'PrePatchError'
@@ -516,7 +517,7 @@ do ->
 
 class Patcher
 
-  constructor: (@wsonDiff, options) ->
+  constructor: (@wdiff, options) ->
 
   patchTarget: (target, delta) ->
     debug 'patch: target=%o, delta=%o', target, delta
@@ -524,11 +525,11 @@ class Patcher
       return
     try
       if delta[0] != '|'
-        value = @wsonDiff.WSON.parse delta
+        value = @wdiff.WSON.parse delta
         target.assign null, value
       else
-        state = new State @wsonDiff.WSON, delta, 1, target, stages.patchBegin
-        @wsonDiff.WSON.parsePartial delta,
+        state = new State @wdiff.WSON, delta, 1, target, stages.patchBegin
+        @wdiff.WSON.parsePartial delta,
           howNext: [true, 1]
           cb: (isValue, value, nextPos) ->
             loop
@@ -577,20 +578,21 @@ class Patcher
       else
         throw error
 
-  patch: (value, delta, notifier) ->
-    target = new ValueTarget @wsonDiff.WSON, value, notifier
+  patch: (value, delta, notifiers) ->
+    target = new ValueTarget @wdiff.WSON, value
+
+    if notifiers?
+      if notifiers.constructor != Array
+        notifiers = [notifiers]
+      if notifiers.length > 0
+        target.setSubTarget new NotifierTarget target, notifiers
+        
     @patchTarget target, delta
+
+    target.setSubTarget null
     target.getRoot()
 
 
 exports.Patcher = Patcher
 exports.PatchError = PatchError
-
-
-
-
-
-
-
-
 

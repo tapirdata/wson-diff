@@ -32,7 +32,7 @@ class StringDiff
     patches = @patches
     if patches.length == 0
       return null
-    WSON = @state.differ.wsonDiff.WSON
+    WSON = @state.differ.wdiff.WSON
     delta = if isRoot then '|[s' else '[s'
     for patch, patchIdx in patches
       [ofs, len, str] = patch

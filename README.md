@@ -4,11 +4,15 @@
 [WSON](https://www.npmjs.com/package/wson) can be used to stringify structured data, transmit that string to some receiver, where it can be parsed to reconstruct that original data. Now both ends posses that identical data. If now that data happens to change a little, why should we retransmit that whole redundant information? This is where wson-diff comes in:
 
 1. Generate a [delta](#delta) by either:
-  - applying `diff` to your old value `have` and the current `wish`.
-  - manually build up this **delta**.
+  - Call `diff` with your old value `have` and the current `wish`.
+  - Manually build up this **delta**.
 2. Send the **delta** over the wire.
-3. On the receiver end: Apply that **delta** to the value `have` in being. Optionally:
- - Use a [notifier](#notifier) to update some dependent (DOM?) - structure.
+3. On the receiver end: Call `patch` to apply that **delta** to the value `have` in being.
+
+### Features
+- `diff` uses [mdiff](https://www.npmjs.com/package/mdiff) to find minimal changes of **arrays** and **strings**. For arrays this changes are further boiled down to deletes, moves, inserts and replaces.
+- `patch` can use [notifiers](#notifier) to forward changes to update some dependent (DOM?)-structure.
+
 
 
 ## Usage
@@ -278,7 +282,7 @@ The underlying WSON-processor may be created with `connectors` to support [custo
 <a name="notifier"></a>
 ## Notifiers
 
-Be that you are not only interested in in the result of patching some value by a **delta**, but want to update some related structure - say a DOM-tree - accordingly. This task can be accomplished by passing `patch` a **notifier**, that should provide the following interface:
+Be that you are not only interested in in the result of patching some value by a **delta**, but want to update some related structure - say a DOM-tree - accordingly. This task can be accomplished by passing `patch`one or **notifiers**, that should provide the following interface:
 
 ```js
 {
@@ -333,6 +337,6 @@ Recognized options:
 Returns the result of applying `delta` to `have`. If possible, `have` will be changed in place.
 
 Recognized options:
-- `notifier`: a [notifier](#notifier), that receives all applied changes.
+- `notifiers`: an array of [notifiers](#notifier), each of which receives all applied changes. A single notifier is accepted, too.
 
 

@@ -75,9 +75,18 @@ for setup in require './fixtures/setups'
         do (item) ->
           debug 'patch: have=%o, delta=%o', item.have, item.delta
           patcher = wdiff.createPatcher item.patchOptions
-          notifier = new Notifier item.budgeTest
+          notifier0 = new Notifier item.budgeTest0
+          if item.budgeTest1?
+            notifier1 = new Notifier item.budgeTest1
+            notifiers = [notifier0, notifier1]
+          else  
+            notifiers = notifier0
           describe item.description, ->
-            it "should patch #{saveRepr item.have} with '#{item.delta}' notify #{saveRepr item.nfys}.", ->
-              patcher.patch item.have, item.delta, notifier
-              expect(notifier.nfys).to.be.deep.equal item.nfys
+            describe "patch #{saveRepr item.have} with '#{item.delta}'", ->
+              patcher.patch item.have, item.delta, notifiers
+              it "should notify #{saveRepr item.nfys0}.", ->
+                expect(notifier0.nfys).to.be.deep.equal item.nfys0
+              if item.budgeTest1?  
+                it "should also notify #{saveRepr item.nfys1}.", ->
+                  expect(notifier1.nfys).to.be.deep.equal item.nfys1
 

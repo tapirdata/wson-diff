@@ -12,7 +12,7 @@ class State
   stringify: (val) ->
     debug 'stringify val=%o wishStack=%o', val, @wishStack
     wishStack = @wishStack
-    @differ.wsonDiff.WSON.stringify val, haverefCb: (backVal) ->
+    @differ.wdiff.WSON.stringify val, haverefCb: (backVal) ->
       debug 'stringify:   backVal=%o', backVal
       for wish, idx in wishStack
         debug 'stringify:     wish=%o, idx=%o', wish, idx
@@ -57,7 +57,7 @@ class State
     delta
 
   getDelta: (have, wish, isRoot) ->
-    WSON = @differ.wsonDiff.WSON
+    WSON = @differ.wdiff.WSON
     haveTi = WSON.getTypeid have
     wishTi = WSON.getTypeid wish
     if wishTi != haveTi
@@ -89,8 +89,8 @@ class State
 
 class Differ
 
-  constructor: (@wsonDiff, options) ->
-    wdOptions = @wsonDiff.options
+  constructor: (@wdiff, options) ->
+    wdOptions = @wdiff.options
     options or= {}
     @stringEdge = if options.stringEdge?
       options.stringEdge

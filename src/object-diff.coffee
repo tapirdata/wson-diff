@@ -24,7 +24,7 @@ class ObjectDiff
 
     diffKeys = null
     if have.constructor? and have.constructor != Object
-      connector = state.differ.wsonDiff.WSON.connectorOfValue have
+      connector = state.differ.wdiff.WSON.connectorOfValue have
       diffKeys = connector?.diffKeys
     hasDiffKeys = diffKeys?
 
