@@ -10,6 +10,42 @@ module.exports = [
     ]
   }
   {
+    description:  'array insert delta'
+    have:  ['foo', 'bar', 'baz']
+    delta: '|[i1:moo]'
+    budgeTest0: ->
+    nfys0: [
+      ['insert', [], 1, ['moo']]
+    ]
+  }
+  {
+    description:  'array delete delta'
+    have:  ['foo', 'bar', 'baz']
+    delta: '|[d1]'
+    budgeTest0: ->
+    nfys0: [
+      ['delete', [], 1, 1]
+    ]
+  }
+  {
+    description:  'array move delta'
+    have:  ['foo', 'bar', 'baz']
+    delta: '|[m1@2]'
+    budgeTest0: ->
+    nfys0: [
+      ['move', [], 1, 2, 1, false]
+    ]
+  }
+  {
+    description:  'array replace delta'
+    have:  ['foo', 'bar', 'baz']
+    delta: '|[r1:moo]'
+    budgeTest0: ->
+    nfys0: [
+      ['replace', [], 1, ['moo']]
+    ]
+  }
+  {
     description:  'deep delta detailed'
     have: {foo: {a: 'alice', b: 'bob'}, bar: {a: 'alice', b: 'bob'}, baz: {a: 'alice', b: 'bob'}}
     delta: '|foo|a:eve'

@@ -57,7 +57,7 @@ class Notifier
   delete: (idx, len) ->
     @nfys.push ['delete', @fullPath(), idx, len]
   move: (srcIdx, dstIdx, len, reverse) ->
-    @nfys.push ['move', @fullPath(), srcIdx, dstIdx, reverse]
+    @nfys.push ['move', @fullPath(), srcIdx, dstIdx, len, reverse]
   insert: (idx, values) ->
     @nfys.push ['insert', @fullPath(), idx, values]
   replace: (idx, values) ->

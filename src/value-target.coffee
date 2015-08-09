@@ -79,7 +79,7 @@ class ValueTarget extends Target
 
   delete: (idx, len) ->
     debug 'delete(idx=%o len=%o) @current=%o', idx, len, @current
-    @subTarget?.delete key, len
+    @subTarget?.delete idx, len
     @current.splice idx, len
     return
 
@@ -101,7 +101,7 @@ class ValueTarget extends Target
 
   replace: (idx, values) ->
     debug 'replace(idx=%o, values=%o)', idx, values
-    @subTarget?.insert idx, values
+    @subTarget?.replace idx, values
     valuesLen = values.length
     if valuesLen == 0
       return
