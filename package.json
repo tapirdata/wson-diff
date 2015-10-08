@@ -23,17 +23,17 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tapirdata/wson-diff"
+    "url": "tapirdata/wson-diff"
   },
   "devDependencies": {
-    "chai": "^3.0.0",
-    "coffee-script": "^1.9.3",
-    "mocha": "^2.2.5"
+    "chai": "^3.3.0",
+    "coffee-script": "^1.10.0",
+    "mocha": "^2.3.3"
   },
   "dependencies": {
     "debug": "^2.2.0",
-    "lodash": "^3.10.0",
-    "mdiff": "^0.3.0",
-    "wson": "^1.8.0"
+    "lodash": "^3.10.1",
+    "mdiff": "^0.3.1",
+    "wson": "^1.9.1"
   }
 }
