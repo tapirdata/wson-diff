@@ -59,6 +59,7 @@ This is an informal description of the Delta-Syntax. There is also an EBNF-file 
 If `have` is deep equal to `wish`, `diff` returns `null`.
 
 Examples:
+
 | `have`              | `wish`              |
 |---------------------|---------------------|
 | `23`                | `23`                |
@@ -74,6 +75,7 @@ Any WSON-value is a **plain-delta**. Its semantics is: Ignore `have`, just use t
 A **plain-delta** will be produced for **scalars** (every **string**, **array**, or **object** except `Date`, which _are_ WSON-scalars) and if `have` and `wish` have different types.
 
 Examples:
+
 | `have`              | `wish`              |  `delta`         |
 |---------------------|---------------------|------------------|
 | `23`                | `42`                | #42              |
@@ -92,6 +94,7 @@ A **real-delta** starts with a '|' followed by zero ore more [modifiers](#modifi
 A **path** consists of one ore more keys separated by '|'. Each key is a WSON-string.
 
 Examples:
+
 | path                     | keys                                                                                              |
 |--------------------------|---------------------------------------------------------------------------------------------------|
 | a                        | 'a'                                                                                               |
@@ -105,6 +108,7 @@ Examples:
 An **assignment** consists of a [path](#path) followed by a ':', followed by a WSON-value. Its semantics is: Use **path** to dive into the **object** (All keys but the last must resolve to **objects**). Use the last key to set or replace that property by **value**.
 
 Examples:
+
 | `have`                 | `wish`                        |  `delta`         |
 |------------------------|-------------------------------|------------------|
 | `{a: 3, b: 4}`         | `{a: 3, b: 42}`               | \|b:#42          |
@@ -136,6 +140,7 @@ There are two **modifiers** that operate on an **object**: [unset](#unset-modifi
 - Semantics: Remove **key** from **object**
 
 Examples:
+
 | `have`                | `wish`              |  `delta`         |
 |-----------------------|---------------------|------------------|
 | `{a: 3, b: 4, c: 5}`  | `{b: 4}`            | [-a\|c]          |
@@ -172,7 +177,6 @@ Note: `diff` will create a [plain-delta](#plain-delta):
 
 Examples:
 
-Examples:
 | `have`                  | `wish`                  |  `delta`         | Explanation                                                                                 |
 |-------------------------|-------------------------|------------------|---------------------------------------------------------------------------------------------|
 | `[2, 3, 5, 7, 11, 13]`  | `[2, 5, 7, 11, 13]`     | [d1]             | Delete one entry at index 1                                                                 |
@@ -186,6 +190,7 @@ Examples:
 - Semantics: Move one or more entries in the array. If extra-count is specified, then (extra-count + 1) entries will be moved. The sequence to move will be first cut out at source-index and then reinserted at destination-index (which applies to the already reduced array). If there is a '-', the sequence will be reversed before reinsertion.
 
 Examples:
+
 | `have`                  | `wish`                    |  `delta`            | Explanation                                                             |
 |-------------------------|---------------------------|---------------------|-------------------------------------------------------------------------|
 | `[2, 3, 5, 7, 11, 13]`  |  `[2, 3, 7, 11, 5, 13]`   | [m2@4]              | Cut one entry at index 2 and reinsert it at index 4                     |
@@ -201,6 +206,7 @@ Examples:
 - Semantics: Insert one or more entries into the array.
 
 Examples:
+
 | `have`                  | `wish`                  |  `delta`          | Explanation                                                                                |
 |-------------------------|-------------------------|-------------------|--------------------------------------------------------------------------------------------|
 | `[2, 5, 7, 11, 13]`     | `[2, 3, 5, 7, 11, 13]`  | [i1:#3]           | Insert value `3` at index 1.                                                               |
@@ -217,6 +223,7 @@ Examples:
 - Semantics: Replace one or more entries of the array.
 
 Examples:
+
 | `have`                  | `wish`                    |  `delta`            | Explanation                                                                                 |
 |-------------------------|---------------------------|---------------------|---------------------------------------------------------------------------------------------|
 | `[2, 3, 5, 7, 11, 13]`  |  `[2, 3, 15, 7, 11, 13]`  | [r2:#15]            | Replace the entry at index 2 with `15`.                                                     |
@@ -253,6 +260,7 @@ Note: `diff` will create a [plain-delta](#plain-delta):
 I.e. a missing length-modifier results in a pure replacement.
 
 Examples (with `stringEdge: 0`):
+
 | `have`                    | `wish`                    |  `delta`            | Explanation        |
 |---------------------------|---------------------------|---------------------|--------------------|
 | `'hovercraft'`            | `'Hovercraft'`            | [s0=H]              | simple replacement |
