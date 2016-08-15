@@ -23,17 +23,14 @@ class Modifier {
   }
 
   setupLegs() {
-    // debug 'setupLegs: mdx=%o legs:', @mdx
-    // for leg in @legs
-    //   debug '  %o', leg
-    let { mdx } = this;
-    let outLegs = _(this.legs).filter(leg => leg.haveMdx === mdx).sortBy('haveOfs').value();
-    let inLegs = _(this.legs).filter(leg => leg.wishMdx === mdx).sortBy('wishOfs').value();
+    const { mdx } = this;
+    const outLegs = _(this.legs).filter(leg => leg.haveMdx === mdx).sortBy('haveOfs').value();
+    const inLegs = _(this.legs).filter(leg => leg.wishMdx === mdx).sortBy('wishOfs').value();
     debug('setupLegs: mdx=%o, outLegs=%o, inLegs=%o', mdx, outLegs, inLegs);
 
-    let legs = [];
-    let { haveLen } = this;
-    let { wishLen } = this;
+    const legs = [];
+    const { haveLen } = this;
+    const { wishLen } = this;
     let outLegIdx = 0;
     let outEnd = 0;
     let outGapSum = 0;
@@ -42,9 +39,9 @@ class Modifier {
     let inGapSum = 0;
     let gapSum = 0;
 
-    let nextOutLeg = function() {
+    const nextOutLeg = function() {
       if (outLegIdx < outLegs.length) {
-        let outLeg = outLegs[outLegIdx++];
+        const outLeg = outLegs[outLegIdx++];
         outGapSum += outLeg.haveOfs - outEnd;
         outEnd = outLeg.haveOfs + outLeg.len;
         return outLeg;
@@ -175,9 +172,9 @@ class Modifier {
     }
     let haveLoc = (this.haveLen + this.doneBalance) - this.closeGap;
     for (let legIdx = this.legs.length - 1; legIdx >= 0; legIdx--) {
-      let leg = this.legs[legIdx];
+      const leg = this.legs[legIdx];
       debug('getDeletes: restBalance=%o haveLoc=%o leg=%o', restBalance, haveLoc, leg);
-      let legLen = leg.len;
+      const legLen = leg.len;
       if (legLen > 0) {
         if (leg.done) {
           haveLoc -= legLen;
@@ -208,7 +205,7 @@ class Modifier {
     let haveLoc = (this.haveLen + this.doneBalance) - this.closeGap;
     let wishLoc = this.wishLen - this.closeGap;
     for (let legIdx = this.legs.length - 1; legIdx >= 0; legIdx--) {
-      let leg = this.legs[legIdx];
+      const leg = this.legs[legIdx];
       debug('getInserts:   restBalance=%o haveLoc=%o wishLoc=%o leg=%o', restBalance, haveLoc, wishLoc, leg);
       let legLen = leg.len;
       if (legLen > 0) {
@@ -239,9 +236,9 @@ class Modifier {
     let haveLoc = 0;
     let wishLoc = 0;
     for (let legIdx = 0; legIdx < this.legs.length; legIdx++) {
-      let leg = this.legs[legIdx];
-      var { gap } = leg;
-      let legLen = leg.len;
+      const leg = this.legs[legIdx];
+      const { gap } = leg;
+      const legLen = leg.len;
       if (gap > 0) {
         cb(this.haveBegin + meModOff + haveLoc, this.wishBegin + wishLoc, gap);
       }
@@ -267,10 +264,10 @@ class Modifier {
     debug('putMove:   legId=%o', legId);
     let meLoc = 0;
     for (let legIdx = 0; legIdx < this.legs.length; legIdx++) {
-      let leg = this.legs[legIdx];
+      const leg = this.legs[legIdx];
       debug('putMove:     meLoc=%o leg=%o', meLoc, leg);
       meLoc += leg.gap;
-      let legLen = leg.len;
+      const legLen = leg.len;
       if (leg.id === legId) {
         this.doneBalance += legLen;
         leg.done = true;
@@ -290,21 +287,21 @@ class Modifier {
 
   getMoves(meModOff, cb) {
     debug('getMoves: mdx=%o meModOff=%o', this.mdx, meModOff);
-    let { ad } = this;
+    const { ad } = this;
     let meLoc = 0;
     for (let legIdx = 0; legIdx < this.legs.length; legIdx++) {
-      let leg = this.legs[legIdx];
+      const leg = this.legs[legIdx];
       debug('getMoves:   meLoc=%o leg=%o', meLoc, leg);
       meLoc += leg.gap;
-      let legLen = leg.len;
-      let { youMdx } = leg;
+      const legLen = leg.len;
+      const { youMdx } = leg;
       if ((youMdx != null) && leg.youMdx > this.mdx) {
         let youModifier = ad.modifiers[youMdx];
-        let youModOff = meModOff + ad.getModOffDiff(this.mdx, youMdx);
+        const youModOff = meModOff + ad.getModOffDiff(this.mdx, youMdx);
         debug('getMoves:   meModOff=%o, youModOff=%o', meModOff, youModOff);
-        let youLoc = youModifier.putMove(leg.id);
+        const youLoc = youModifier.putMove(leg.id);
         debug('getMoves:   meLoc=%o, youLoc=%o', meLoc, youLoc);
-        let meIdx = this.haveBegin + meModOff + meLoc;
+        const meIdx = this.haveBegin + meModOff + meLoc;
         youModifier = youModifier.haveBegin + youModOff + youLoc;
         if (legLen < 0) {
           cb(meIdx, youModifier + legLen, -legLen, leg.reverse);
@@ -352,8 +349,7 @@ class ArrayDiff {
   }
 
   setupModifiers(limit) {
-    let { haveIdxer } = this;
-    let { wishIdxer } = this;
+    let { haveIdxer, wishIdxer } = this;
 
     let modifiers = [];
     let wishKeyUses = {};
@@ -385,7 +381,7 @@ class ArrayDiff {
       limit = limit(this.have, this.wish);
     }
 
-    let diffLen = mdiff(haveIdxer.keys, wishIdxer.keys).scanDiff(scanCb, limit);
+    const diffLen = mdiff(haveIdxer.keys, wishIdxer.keys).scanDiff(scanCb, limit);
     this.aborted = (diffLen == null);
     this.modifiers = modifiers;
     this.wishKeyUses = wishKeyUses;
@@ -403,9 +399,7 @@ class ArrayDiff {
       let { haveLen }  = modifier;
       // debug 'setupLegs: modifier mdx=%o %o+%o', modifier.mdx, haveBegin, haveLen
       let leg = null;
-      let iterable = __range__(0, haveLen, false);
-      for (let j = 0; j < iterable.length; j++) {
-        let haveOfs = iterable[j];
+      for (let haveOfs = 0; haveOfs < haveLen; haveOfs++) {
         let key = haveIdxer.keys[haveBegin + haveOfs];
         let wishKeyUse = wishKeyUses[key];
         // debug 'setupLegs:   key=%o wishKeyUse', key, wishKeyUse
@@ -477,13 +471,11 @@ class ArrayDiff {
     if (fromMdx < toMdx) {
       var idx = fromMdx;
       while (idx < toMdx) {
-        // debug 'getModOffDiff: idx=%o, +doneBalance=%o', idx, modifiers[idx]
         sum += modifiers[idx++].doneBalance;
       }
     } else {
       var idx = toMdx;
       while (idx < fromMdx) {
-        // debug 'getModOffDiff: idx=%o, -doneBalance=%o', idx, modifiers[idx]
         sum -= modifiers[idx++].doneBalance;
       }
     }
@@ -512,7 +504,6 @@ class ArrayDiff {
       delta += ']';
     }
 
-    // @debugModifiers 'getDeleteDelta done.'
     return delta;
   }
 
@@ -523,16 +514,13 @@ class ArrayDiff {
     let { wishIdxer } = this;
     debug('getInsertDelta: meModOff=%o', meModOff);
     for (let modIdx = this.modifiers.length - 1; modIdx >= 0; modIdx--) {
-      console.log('modIdx=', modIdx);
       let modifier = this.modifiers[modIdx];
       meModOff -= modifier.doneBalance;
       modifier.getInserts(meModOff, function(havePos, wishPos, len) {
         debug('getInsertDelta: havePos=%o, wishPos=%o, len=%o', havePos, wishPos, len);
         delta += count === 0 ? '[i' : '|';
         delta += havePos;
-        let iterable = __range__(0, len, false);
-        for (let j = 0; j < iterable.length; j++) {
-          const i = iterable[j];
+        for (let i = 0; i < len; i++) {
           delta += `:${wishIdxer.getItem(wishPos + i)}`;
         }
         return ++count;
@@ -543,7 +531,6 @@ class ArrayDiff {
       delta += ']';
     }
 
-    // @debugModifiers 'getInsertDelta done.'
     return delta;
   }
 
@@ -562,9 +549,7 @@ class ArrayDiff {
         delta += count === 0 ? '[r' : '|';
         delta += havePos;
         let canChain = true;
-        let iterable = __range__(0, len, false);
-        for (let j = 0; j < iterable.length; j++) {
-          const i = iterable[j];
+        for (let i = 0; i < len; i++) {
           let iDelta = state.getDelta(
             have[havePos + i],
             wish[wishPos + i]
@@ -641,14 +626,3 @@ class ArrayDiff {
 
 export default ArrayDiff;
 
-
-
-function __range__(left, right, inclusive) {
-  let range = [];
-  let ascending = left < right;
-  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

@@ -7,8 +7,7 @@ import * as diff from './diff';
 
 class WsonDiff {
 
-  constructor(options) {
-    if (!options) { options = {}; }
+  constructor(options = {}) {
     let { WSON } = options;
     if (WSON == null) {
       WSON = wson(options.wsonOptions);
@@ -17,13 +16,11 @@ class WsonDiff {
     this.options = options;
   }
 
-  createPatcher(options) {
-    if (!options) { options = {}; }
+  createPatcher(options = {}) {
     return new patch.Patcher(this, options);
   }
 
-  createDiffer(options) {
-    if (!options) { options = {}; }
+  createDiffer(options = {}) {
     return new diff.Differ(this, options);
   }
 
@@ -34,7 +31,7 @@ class WsonDiff {
 
   patch(have, delta, options) {
     let patcher = this.createPatcher(options);
-    return patcher.patch(have, delta, __guard__(options, x => x.notifiers));
+    return patcher.patch(have, delta, options ? options.notifiers : undefined);
   }
 
   patchTarget(target, delta, options) {
@@ -52,14 +49,3 @@ factory.PatchError = patch.PatchError;
 export default factory;
 
 
-
-
-
-
-
-
-
-
-function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
-}

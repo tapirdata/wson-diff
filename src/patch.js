@@ -138,7 +138,7 @@ class State {
   }
 
   pushScope(nextStage) {
-    debug('pushScope scopeDepth=%o @targetDepth=%o stage=%o', this.scopeDepth, this.targetDepth, __guard__(this.stage, x => x.name));
+    debug('pushScope scopeDepth=%o @targetDepth=%o stage=%o', this.scopeDepth, this.targetDepth, this.stage ? this.stage.name : undefined);
     this.scopeStack.push([this.scopeDepth, this.scopeTi, nextStage]);
     this.scopeDepth = this.targetDepth;
   }
@@ -306,7 +306,7 @@ class State {
   addSubstitute(skey) {
     let m = reSubst.exec(skey);
     if (m == null) {
-      throw new PrePatchError(`invalid substitution ${skey} for string ${__guardFunc__(this.target.get, f => f())}`);
+      throw new PrePatchError(`invalid substitution ${skey} for string ${this.target.get ? this.target.get() : undefined}`);
     }
     let ofs = Number(m[1]);
     if (m[3] != null) {
@@ -602,12 +602,12 @@ var stages = {
   }
 };
 
-(function() {
+{
   for (let name in stages) {
     let stage = stages[name];
     stage.name = name;
   }  
-})();
+};
 
 
 class Patcher {
@@ -647,7 +647,7 @@ class Patcher {
             state.rawNext = true;
             state.skipNext = 0;
             handler.call(state, value, nextPos);
-            debug('patch: pos=%o, rawNext=%o, skipNext=%o, stage.name=%o', state.pos, state.rawNext, state.skipNext, __guard__(state.stage, x => x.name));
+            debug('patch: pos=%o, rawNext=%o, skipNext=%o, stage.name=%o', state.pos, state.rawNext, state.skipNext, state.stage ? state.stage.name : undefined);
             state.pos = nextPos;
             if (state.skipNext > 0) {
               state.pos += state.skipNext;
@@ -709,13 +709,5 @@ class Patcher {
 }
 
 
-export { Patcher };
-export { PatchError };
+export { Patcher,  PatchError };
 
-
-function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
-}
-function __guardFunc__(func, transform) {
-  return typeof func === 'function' ? transform(func) : undefined;
-}

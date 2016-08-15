@@ -28,7 +28,7 @@ class ObjectDiff {
     let diffKeys = null;
     if ((have.constructor != null) && have.constructor !== Object) {
       let connector = state.differ.wdiff.WSON.connectorOfValue(have);
-      diffKeys = __guard__(connector, x => x.diffKeys);
+      diffKeys = connector ? connector.diffKeys : null;
     }
     let hasDiffKeys = (diffKeys != null);
 
@@ -99,6 +99,3 @@ class ObjectDiff {
 
 export default ObjectDiff;
 
-function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
-}

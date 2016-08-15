@@ -1,4 +1,9 @@
-# wson-diff [![Build Status](https://secure.travis-ci.org/tapirdata/wson-diff.png?branch=master)](https://travis-ci.org/tapirdata/wson-diff) [![Dependency Status](https://david-dm.org/tapirdata/wson-diff.svg)](https://david-dm.org/tapirdata/wson-diff) [![devDependency Status](https://david-dm.org/tapirdata/wson-diff/dev-status.svg)](https://david-dm.org/tapirdata/wson-diff#info=devDependencies)
+# wson-diff
+
+[![npm version](https://img.shields.io/npm/v/wson-diff.svg?style=flat-square)](https://www.npmjs.com/package/wson-diff)
+[![Build Status](https://secure.travis-ci.org/tapirdata/wson-diff.png?branch=master)](https://travis-ci.org/tapirdata/wson-diff)
+[![Dependency Status](https://david-dm.org/tapirdata/wson-diff.svg)](https://david-dm.org/tapirdata/wson-diff) 
+[![devDependency Status](https://david-dm.org/tapirdata/wson-diff/dev-status.svg)](https://david-dm.org/tapirdata/wson-diff#info=devDependencies)
 >  A differ/patcher for arbitrary values that presents delta in a terse WSON-like format.
 
 [WSON](https://www.npmjs.com/package/wson) can be used to stringify structured data, transmit that string to some receiver, where it can be parsed to reconstruct that original data. Now both ends posses that identical data. If now that data happens to change a little, why should we retransmit that whole redundant information? This is where wson-diff comes in:
@@ -22,30 +27,31 @@ $ npm install wson-diff
 ```
 
 ```js
-wdiff = require('wson-diff')();
+import wdiffFactory from 'wson-diff';
+const wdiff = wdiffFactory();
 
 var have = {
-  name: "otto",
+  name: 'otto',
   size: 177.3,
-  completed: ["forth", "javascript", "c++", "haskell"],
+  completed: ['forth', 'javascript', 'c++', 'haskell'],
   active: true,
   message: 'My hovercraft is full of eels.'
 };
 
 var wish = {
-  name: "rudi",
+  name: 'rudi',
   size: 177.4,
-  completed: ["forth", "coffeescript", "haskell", "c++", "lisp"],
+  completed: ['forth', 'coffeescript', 'haskell', 'c++', 'lisp'],
   active: false,
   message: 'My hovercraft is full of eels!'
 };
 
 var delta = wdiff.diff(have, wish);
-console.log('delta="%s"', delta);
-// delta="|active:#f|completed[m3@2][i4:lisp][r1:coffeescript]|message[s29=!]|name:rudi|size:#177.4"
+console.log('delta=\'%s\'', delta);
+// delta='|active:#f|completed[m3@2][i4:lisp][r1:coffeescript]|message[s29=!]|name:rudi|size:#177.4'
 
 var result = wdiff.patch(have, delta);
-console.log('result="%j"', result);
+console.log('result=\'%j\'', result);
 // Now result (and have) is deep equal to wish.
 ```
 

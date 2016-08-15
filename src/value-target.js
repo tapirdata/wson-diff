@@ -40,7 +40,9 @@ class ValueTarget extends Target {
       if (typeof value === 'object' && (value.constructor != null) && value.constructor !== Object) {
         let connector = this.WSON.connectorOfValue(value);
         debug('closeObjects_ connector=%o', connector);
-        __guard__(__guard__(connector, x1 => x1.postpatch), x => x.call(value));
+        if (connector && connector.postpatch) {
+          connector.postpatch.call(value);
+        }
       }
       if (--idx < tillIdx) {
         break;
@@ -62,7 +64,9 @@ class ValueTarget extends Target {
     debug('budge(up=%o key=%o)', up, key);
     debug('budge: stack=%o current=%o', this.stack, this.current);
     let { stack } = this;
-    __guard__(this.subTarget, x => x.budge(up, key));
+    if (this.subTarget) {
+      this.subTarget.budge(up, key);
+    }
     if (up > 0) {
       let newLen = stack.length - up;
       this.closeObjects_(newLen + 1);
@@ -81,25 +85,33 @@ class ValueTarget extends Target {
 
   unset(key) {
     debug('unset(key=%o) @current=%o', key, this.current);
-    __guard__(this.subTarget, x => x.unset(key));
+    if (this.subTarget) {
+      this.subTarget.unset(key);
+    }
     delete this.current[key];
   }
 
   assign(key, value) {
     debug('assign(key=%o value=%o)', key, value);
-    __guard__(this.subTarget, x => x.assign(key, value));
+    if (this.subTarget) {
+      this.subTarget.assign(key, value);
+    }
     this.put_(key, value);
   }
 
   delete(idx, len) {
     debug('delete(idx=%o len=%o) @current=%o', idx, len, this.current);
-    __guard__(this.subTarget, x => x.delete(idx, len));
+    if (this.subTarget) {
+      this.subTarget.delete(idx, len);
+    }
     this.current.splice(idx, len);
   }
 
   move(srcIdx, dstIdx, len, reverse) {
     debug('move(srcIdx=%o dstIdx=%o len=%o reverse=%o)', srcIdx, dstIdx, len, reverse);
-    __guard__(this.subTarget, x => x.move(srcIdx, dstIdx, len, reverse));
+    if (this.subTarget) {
+      this.subTarget.move(srcIdx, dstIdx, len, reverse);
+    }
     let { current } = this;
     let chunk = current.splice(srcIdx, len);
     if (reverse) {
@@ -109,14 +121,18 @@ class ValueTarget extends Target {
   }
 
   insert(idx, values) {
-    __guard__(this.subTarget, x => x.insert(idx, values));
+    if (this.subTarget) {
+      this.subTarget.insert(idx, values);
+    }
     let { current } = this;
     current.splice.apply(current, [idx, 0].concat(values));
   }
 
   replace(idx, values) {
     debug('replace(idx=%o, values=%o)', idx, values);
-    __guard__(this.subTarget, x => x.replace(idx, values));
+    if (this.subTarget) {
+      this.subTarget.replace(idx, values);
+    }
     let valuesLen = values.length;
     if (valuesLen === 0) {
       return;
@@ -135,7 +151,9 @@ class ValueTarget extends Target {
 
   substitute(patches) {
     debug('substitute(patches=%o)', patches);
-    __guard__(this.subTarget, x => x.substitute(patches));
+    if (this.subTarget) {
+      this.subTarget.substitute(patches);
+    }
     let { current } = this;
     let result = '';
     let endOfs = 0;
@@ -161,7 +179,9 @@ class ValueTarget extends Target {
 
   done() {
     debug('done: stack=%o current=%o', this.stack, this.current);
-    __guard__(this.subTarget, x => x.done());
+    if (this.subTarget) {
+      this.subTarget.done();
+    }
     this.closeObjects_(0);
   }
 
@@ -171,7 +191,3 @@ class ValueTarget extends Target {
 
 export default ValueTarget;
 
-
-function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
-}
