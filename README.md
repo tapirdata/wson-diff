@@ -27,8 +27,8 @@ $ npm install wson-diff
 ```
 
 ```js
-import wdiffFactory from 'wson-diff';
-const wdiff = wdiffFactory();
+import wdiffFactory from 'wson-diff'
+const wdiff = wdiffFactory()
 
 var have = {
   name: 'otto',
@@ -36,7 +36,7 @@ var have = {
   completed: ['forth', 'javascript', 'c++', 'haskell'],
   active: true,
   message: 'My hovercraft is full of eels.'
-};
+}
 
 var wish = {
   name: 'rudi',
@@ -44,14 +44,14 @@ var wish = {
   completed: ['forth', 'coffeescript', 'haskell', 'c++', 'lisp'],
   active: false,
   message: 'My hovercraft is full of eels!'
-};
+}
 
-var delta = wdiff.diff(have, wish);
-console.log('delta=\'%s\'', delta);
+var delta = wdiff.diff(have, wish)
+console.log('delta=\'%s\'', delta)
 // delta='|active:#f|completed[m3@2][i4:lisp][r1:coffeescript]|message[s29=!]|name:rudi|size:#177.4'
 
-var result = wdiff.patch(have, delta);
-console.log('result=\'%j\'', result);
+var result = wdiff.patch(have, delta)
+console.log('result=\'%j\'', result)
 // Now result (and have) is deep equal to wish.
 ```
 
@@ -78,7 +78,7 @@ Examples:
 
 Any WSON-value is a **plain-delta**. Its semantics is: Ignore `have`, just use the WSON-stringified delta as the `result`.
 
-A **plain-delta** will be produced for **scalars** (every **string**, **array**, or **object** except `Date`, which _are_ WSON-scalars) and if `have` and `wish` have different types.
+A **plain-delta** will be produced for **scalars** (everything but **string**, **array**, or **object** – except `Date`, which _are_ WSON-scalars) and if `have` and `wish` have different types.
 
 Examples:
 
@@ -298,16 +298,16 @@ The underlying WSON-processor may be created with `connectors` to support [custo
 
 Be that you are not only interested in in the result of patching some value by a **delta**, but want to update some related structure - say a DOM-tree - accordingly. This task can be accomplished by passing `patch`one or **notifiers**, that should provide the following interface:
 
-```js
-{
-  checkedBudge: function(up, key, current) {},
-  unset: function(key, current) {},
-  assign: function(key, value, current) {},
-  "delete": function(idx, len, current) {},
-  move: function(srcIdx, dstIdx, len, reverse, current) {},
-  insert: function(idx, values, current) {},
-  replace: function(idx, values, current) {},
-  substitute: function(patches, current) {}
+```ts
+interface Notifier {
+  checkedBudge: (up: number, key: Key, current: any) => boolean
+  unset: (key: string, curent: any) => void
+  assign: (key: string | null, value: any, current?: any) => void
+  delete: (idx: number, len: number, current?: any) => void
+  move: (srcIdx: number, dstIdx: number, len: number, reverse: boolean, current?: any) => void
+  insert: (idx: number, values: any[], current?: any) => void
+  replace: (idx: number, values: any[], current?: any) => void
+  substitute: (patches: Patch[], current?: any) => void
 }
 ```
 A notifier is assumed to to hold some **cursor** that could be manipulated by calling `checkedBudge`: `up` is a number >= 0 that says how many levels we want to go up. If `key` is not `null` it is a numeric array-index or a string object-key. Then the **cursor** should be moved into the item that is indicated by `key`. If a `key` is provided (or for a first extra call with `up=0, key=null`), `checkedBudge` may return `false` to signal a [cut](#notify-cut). Inititally the **cursor** refers to the root-value (The `have` that is passed to `patch`).
@@ -319,7 +319,7 @@ The other methods just resemble the parsed [modifiers](#modifier). For convenien
 <a name="notify-cut"></a>
 ### Cut
 
-To finer tailor the amount of notification `checkedBudge` may return `false`. Then all modifications for the value reached by `key` will be collected and notified by a single call of `assign` (without a `current` argument). E.g. if `checkedBudge` returns `false` whenever `current` happens to be a string, a [substitute-delta](#substitute-delta) will never have `substitute` be called but results in the same call of `assign` as if there had been a [plain-delta](plain-plain) for this string.
+To finer tailor the amount of notification `checkedBudge` may return `false`. Then all modifications for the value reached by `key` will be collected and notified by a single call of `assign` (without a `current` argument). E.g. if `checkedBudge` returns `false` whenever `current` happens to be a string, a [substitute-delta](#substitute-delta) will never have `substitute` be called but results in the same call of `assign` as if there had been a [plain-delta](#plain-delta) for this string.
 
 
 <a name="api"></a>
