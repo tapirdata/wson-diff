@@ -30,19 +30,19 @@
   "devDependencies": {
     "@types/chai": "^4.0.1",
     "@types/mocha": "^2.2.41",
-    "@types/node": "^8.0.2",
-    "chai": "^4.0.2",
+    "@types/node": "^8.0.17",
+    "chai": "^4.1.0",
     "mocha": "^3.4.2",
-    "ts-node": "^3.1.0",
-    "tslint": "^5.4.3",
-    "typescript": "^2.4.0"
+    "ts-node": "^3.3.0",
+    "tslint": "^5.5.0",
+    "typescript": "^2.4.2"
   },
   "dependencies": {
     "@types/debug": "0.0.29",
-    "@types/lodash": "^4.14.67",
+    "@types/lodash": "^4.14.71",
     "debug": "^2.6.1",
     "lodash": "^4.17.4",
-    "mdiff": "^1.2.0",
-    "wson": "^2.2.2"
+    "mdiff": "^1.2.1",
+    "wson": "^2.4.2"
   }
 }

@@ -73,10 +73,10 @@ export class Modifier {
 
     function nextOutLeg() {
       if (outLegIdx < outLegs.length) {
-        const outLeg = outLegs[outLegIdx++]
-        outGapSum += outLeg.haveOfs - outEnd
-        outEnd = outLeg.haveOfs + outLeg.len
-        return outLeg
+        const resultLeg = outLegs[outLegIdx++]
+        outGapSum += resultLeg.haveOfs - outEnd
+        outEnd = resultLeg.haveOfs + resultLeg.len
+        return resultLeg
       } else {
         outGapSum += haveLen - outEnd
         return null
@@ -85,10 +85,10 @@ export class Modifier {
 
     function nextInLeg() {
       if (inLegIdx < inLegs.length) {
-        const inLeg = inLegs[inLegIdx++]
-        inGapSum += inLeg.wishOfs - inEnd
-        inEnd = inLeg.wishOfs + inLeg.len
-        return inLeg
+        const resultLeg = inLegs[inLegIdx++]
+        inGapSum += resultLeg.wishOfs - inEnd
+        inEnd = resultLeg.wishOfs + resultLeg.len
+        return resultLeg
       } else {
         inGapSum += wishLen - inEnd
         return null
@@ -285,9 +285,9 @@ export class Modifier {
         haveLoc -= legLen
       }
     }
-    const gap = this.closeGap
-    if (gap > 0) {
-      cb(this.haveBegin + meModOff + haveLoc, this.wishBegin + wishLoc, gap)
+    const { closeGap } = this
+    if (closeGap > 0) {
+      cb(this.haveBegin + meModOff + haveLoc, this.wishBegin + wishLoc, closeGap)
     }
   }
 
