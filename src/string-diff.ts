@@ -1,9 +1,10 @@
-import _ = require("lodash")
 import debugFactory = require("debug")
-const debug = debugFactory("wson-diff:string-diff")
-
+import _ = require("lodash")
 import mdiff from "mdiff"
+
 import { State } from "./diff"
+
+const debug = debugFactory("wson-diff:string-diff")
 
 export type Patch = [number, number, string]
 export type StringLimiter = (have: string, wish: string) => number
@@ -12,7 +13,7 @@ export class StringDiff {
 
   public state: State
   public aborted: boolean
-  public patches: Patch[]
+  public patches: Patch[] = []
 
   constructor(state: State, have: string, wish: string) {
     this.state = state
@@ -34,7 +35,7 @@ export class StringDiff {
       if (_.isFunction(limit)) {
         limit = (limit as (have: string, wish: string) => number)(have, wish)
       }
-      const diffLen = mdiff(have, wish).scanDiff(scanCb, limit)
+      const diffLen = mdiff(have, wish).scanDiff(scanCb, limit as (number | undefined))
       this.aborted = (diffLen == null)
     }
     this.patches = patches

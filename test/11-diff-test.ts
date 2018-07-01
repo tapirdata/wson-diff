@@ -1,12 +1,13 @@
-import debugFactory = require("debug")
-const debug = debugFactory("wson-diff:test")
-import _ = require("lodash")
 import { expect } from "chai"
+import debugFactory = require("debug")
+import _ = require("lodash")
 
 import wsonDiff from "../src/"
 import items from "./fixtures/diff-items"
 import { saveRepr } from "./fixtures/helpers"
 import setups from "./fixtures/setups"
+
+const debug = debugFactory("wson-diff:test")
 
 for (const setup of setups) {
   describe(setup.name, () => {

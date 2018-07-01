@@ -95,6 +95,8 @@ class State {
     this.WSON = WSON
     this.delta = delta
     this.pos = pos
+    this.rawNext = false
+    this.skipNext = 0
     this.target = target
     this.stage = stage
     this.scopeTi = null
@@ -104,6 +106,11 @@ class State {
     this.targetDepth = 0
     this.scopeDepth = 0
     this.scopeStack  = []
+    this.assignValues = null
+    this.replaceValues = null
+    this.insertKey = 0
+    this.insertValues = []
+    this.substituteValues = []
   }
 
   public getCurrentTi() {

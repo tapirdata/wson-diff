@@ -14,8 +14,8 @@ export class ObjectDiff {
 
   public state: State
   public aborted: boolean
-  public have: Obj
-  public wish: Obj
+  public have!: Obj
+  public wish!: Obj
 
   constructor(state: State, have: Obj, wish: Obj) {
     this.state = state

@@ -1,13 +1,14 @@
-import debugFactory = require("debug")
-const debug = debugFactory("wson-diff:test")
-import _ = require("lodash")
 import { expect } from "chai"
+import debugFactory = require("debug")
+import _ = require("lodash")
 
 import { Key, Notifier, Patch } from "../src"
 import wsonDiff from "../src/"
 import { saveRepr } from "./fixtures/helpers"
 import items from "./fixtures/notify-items"
 import setups from "./fixtures/setups"
+
+const debug = debugFactory("wson-diff:test")
 
 class MyNotifier implements Notifier {
 

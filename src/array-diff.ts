@@ -48,6 +48,7 @@ export class Modifier {
     this.legs = []
     this.doneBalance = 0    // of inserts - # of deletes already performed
     this.restBalance = 0   // if < 0: extra inserts, if > 0: extra deletes
+    this.closeGap = 0
   }
 
   public addPreLeg(leg: Leg) {
@@ -357,12 +358,12 @@ export class ArrayDiff {
   public state: State
   public have: any[]
   public wish: any[]
-  public haveIdxer: Idxer
-  public wishIdxer: Idxer
-  public aborted: boolean
-  public nextLegId: number
-  public modifiers: Modifier[]
-  public wishKeyUses: KeyUses
+  public haveIdxer!: Idxer
+  public wishIdxer!: Idxer
+  public aborted: boolean = false
+  public nextLegId: number = 0
+  public modifiers!: Modifier[]
+  public wishKeyUses!: KeyUses
 
   constructor(state: State, have: any[], wish: any[]) {
     this.state = state
@@ -418,7 +419,7 @@ export class ArrayDiff {
       limit = limit(this.have, this.wish)
     }
 
-    const diffLen = mdiff(haveIdxer.keys, wishIdxer.keys).scanDiff(scanCb, limit)
+    const diffLen = mdiff(haveIdxer.keys, wishIdxer.keys).scanDiff(scanCb, limit as (number | undefined))
     this.aborted = (diffLen == null)
     this.modifiers = modifiers
     this.wishKeyUses = wishKeyUses

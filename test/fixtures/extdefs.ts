@@ -32,7 +32,7 @@ export class Foo {
 
   public w: number
   public h: number
-  public area: number
+  public area!: number
 
   constructor(w: number, h: number) {
     this.w = w
