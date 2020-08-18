@@ -1,4 +1,5 @@
 import { Foo, Point, Polygon } from "./extdefs"
+import addon from "wson-addon"
 
 const connectors = {
   Point,
@@ -31,6 +32,7 @@ export default [
     options: {
       wsonOptions: {
         connectors,
+        addon,
       },
     },
   },

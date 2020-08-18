@@ -1,5 +1,5 @@
 import debugFactory = require("debug")
-import _ = require("lodash")
+import * as _ from "lodash"
 import mdiff from "mdiff"
 
 import { State } from "./diff"

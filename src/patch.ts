@@ -1,7 +1,6 @@
 // tslint:disable:max-classes-per-file
 import debugFactory = require("debug")
 const debug = debugFactory("wson-diff:patch")
-import wson from "wson"
 import { Wson } from "wson"
 
 import { WsonDiffError } from "./errors"

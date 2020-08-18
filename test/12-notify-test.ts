@@ -1,6 +1,6 @@
 import { expect } from "chai"
 import debugFactory = require("debug")
-import _ = require("lodash")
+import * as _ from "lodash"
 
 import { Key, Notifier, Patch } from "../src"
 import wsonDiff from "../src/"
@@ -12,7 +12,7 @@ const debug = debugFactory("wson-diff:test")
 
 class MyNotifier implements Notifier {
 
-  public budgeTest: (top: any) => boolean
+  public budgeTest: (...args: any[]) => boolean
   public nfys: any[]
   public keyStack: any[]
 
@@ -31,7 +31,8 @@ class MyNotifier implements Notifier {
     if (key != null) {
       keyStack.push(key)
     }
-    return this.budgeTest.apply(this, _(keyStack).reverse().value())
+    // return true
+    return this.budgeTest(..._.reverse(keyStack))
   }
 
   public fullPath(key?: Key) {

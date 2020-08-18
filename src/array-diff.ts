@@ -1,8 +1,9 @@
 // tslint:disable:max-classes-per-file
-import debugFactory = require("debug")
-const debug = debugFactory("wson-diff:array-diff")
-import _ = require("lodash")
+import debugFactory from "debug"
+import * as _ from "lodash"
 import mdiff from "mdiff"
+
+const debug = debugFactory("wson-diff:array-diff")
 
 import { State } from "./diff"
 import { Idxer } from "./idxer"

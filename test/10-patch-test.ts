@@ -1,5 +1,5 @@
 import { expect } from "chai"
-import _ = require("lodash")
+import * as _ from "lodash"
 
 import wdiffFactory from "../src/"
 import { saveRepr } from "./fixtures/helpers"
@@ -9,12 +9,12 @@ import setups from "./fixtures/setups"
 for (const setup of setups) {
   describe(setup.name, () => {
     const wdiff = wdiffFactory(setup.options)
-    return describe("patch", () => {
+    describe("patch", () => {
       for (const item of items) {
         const patcher = wdiff.createPatcher(item.patchOptions)
         const have = _.cloneDeep(item.have)
         if (item.failPos != null) {
-          return it(`should fail to patch ${saveRepr(have)} with '${item.delta}' @${item.failPos}.`, () => {
+          it(`should fail to patch ${saveRepr(have)} with '${item.delta}' @${item.failPos}.`, () => {
             let e: any
             try {
               patcher.patch(have, item.delta)
@@ -30,7 +30,7 @@ for (const setup of setups) {
           },
           )
         } else {
-          return it(`should patch ${saveRepr(have)} with '${item.delta}' to ${saveRepr(item.wish)}.`,
+          it(`should patch ${saveRepr(have)} with '${item.delta}' to ${saveRepr(item.wish)}.`,
             () => expect(patcher.patch(have, item.delta)).to.be.deep.equal(item.wish),
           )
         }

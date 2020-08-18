@@ -9,19 +9,18 @@ export class NotifierTarget implements Target {
 
   public vt: ValueTarget
   public notifiers: Notifier[]
-  public depths: Array<number | null>
+  public depths: (number | null)[]
 
   constructor(vt: ValueTarget, notifiers: Notifier[]) {
     this.vt        = vt
     this.notifiers = notifiers
     const { current } = vt
-    const depths: Array<number | null> = []
+    const depths: (number | null)[] = []
     for (let ndx = 0; ndx < notifiers.length; ndx++) {
       const notifier = notifiers[ndx]
-      depths[ndx] = false === notifier.checkedBudge(0, null, current) ?
-        0 // assign root
-      :
-        null
+      depths[ndx] = notifier.checkedBudge(0, null, current) === false
+        ? 0 // assign root
+        : null
     }
     this.depths = depths
   }
@@ -43,10 +42,9 @@ export class NotifierTarget implements Target {
         if (notifyDepth != null) {
           notifyUp = notifyDepth - newLen
           if (notifyUp > 0) {
-            const notifyValue = notifyDepth === stackLen ?
-              current
-            :
-              stack[notifyDepth]
+            const notifyValue = notifyDepth === stackLen
+              ? current
+              : stack[notifyDepth]
             notifier.assign(null, notifyValue)
             notifyDepth = null
           } else {
@@ -160,10 +158,9 @@ export class NotifierTarget implements Target {
       const notifier = this.notifiers[ndx]
       const notifyDepth = depths[ndx]
       if (notifyDepth != null) {
-        const notifyValue = notifyDepth === stackLen ?
-          current
-        :
-          stack[notifyDepth]
+        const notifyValue = notifyDepth === stackLen
+          ? current
+          : stack[notifyDepth]
         debug("done: ndx=%o value=%o", ndx, notifyValue)
         notifier.assign(null, notifyValue)
       }
