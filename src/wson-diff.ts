@@ -1,12 +1,12 @@
-import debugFactory = require("debug")
-const debug = debugFactory("wson-diff:wson-diff")
-
 import * as _ from "lodash"
+import debugFactory from "debug"
 import wsonFactory, { Wson } from "wson"
 
 import { Differ } from "./diff"
 import { Delta, Patcher } from "./patch"
 import { Target } from "./target"
+
+const debug = debugFactory("wson-diff:wson-diff")
 
 export class WsonDiff {
 

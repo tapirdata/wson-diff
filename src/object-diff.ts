@@ -1,6 +1,7 @@
-import debugFactory = require("debug")
-const debug = debugFactory("wson-diff:object-diff")
 import * as _ from "lodash"
+import debugFactory from "debug"
+
+const debug = debugFactory("wson-diff:object-diff")
 
 import { State } from "./diff"
 

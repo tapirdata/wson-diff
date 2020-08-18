@@ -1,4 +1,4 @@
-import { Foo, Point, Polygon } from "./extdefs"
+import { Foo, Point } from "./extdefs"
 
 export interface Item {
   description: string
@@ -11,7 +11,7 @@ export interface Item {
   wsonClone?: boolean
 }
 
-const items: Item[] = [
+export const items: Item[] = [
   {
     description: "same number",
     have: 42,
@@ -615,5 +615,3 @@ const items: Item[] = [
     delta: "|bar|members[=a[s0=A]|b[s0=B]]|foo[=members[=a[s0=A]|b[s0=B]]|opponents[=e[s0=E]|m[s0=M]]]",
   },
 ]
-
-export default items

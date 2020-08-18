@@ -1,14 +1,14 @@
 // tslint:disable:max-classes-per-file
-import debugFactory = require("debug")
-const debug = debugFactory("wson-diff:diff")
+import debugFactory from "debug"
 
 import { ArrayDiff, ArrayLimiter } from "./array-diff"
 import { ObjectDiff } from "./object-diff"
 import { StringDiff, StringLimiter } from "./string-diff"
 import { WsonDiff } from "./wson-diff"
 
-export class State {
+const debug = debugFactory("wson-diff:diff")
 
+export class State {
   public differ: Differ
   public wishStack: any[]
   public haveStack: any[]

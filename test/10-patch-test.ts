@@ -1,10 +1,10 @@
-import { expect } from "chai"
 import * as _ from "lodash"
+import { expect } from "chai"
 
 import wdiffFactory from "../src/"
 import { saveRepr } from "./fixtures/helpers"
-import items from "./fixtures/patch-items"
-import setups from "./fixtures/setups"
+import { items } from "./fixtures/patch-items"
+import { setups } from "./fixtures/setups"
 
 for (const setup of setups) {
   describe(setup.name, () => {

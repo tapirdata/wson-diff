@@ -11,7 +11,7 @@ export interface Item {
   patchOptions?: any
 }
 
-const items: Item[] = [
+export const items: Item[] = [
   {
     description:  "plain delta",
     have:  null,
@@ -112,5 +112,3 @@ const items: Item[] = [
     ],
   },
 ]
-
-export default items

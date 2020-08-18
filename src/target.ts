@@ -1,4 +1,5 @@
-import debugFactory = require("debug")
+import debugFactory from "debug"
+
 const debug = debugFactory("wson-diff:target")
 
 export type Key = string | number | null

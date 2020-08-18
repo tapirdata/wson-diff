@@ -7,7 +7,7 @@ export interface Item {
   patchOptions?: any
 }
 
-const items: Item[] = [
+export const items: Item[] = [
   // set
   {
     have:  null,
@@ -311,5 +311,3 @@ const items: Item[] = [
     delta: "|bar|members[=a[r0:A]|b[r0:B]]|foo[=members[=a[r0:A]|b[r0:B]]|opponents[=e[r0:E]|m[r0:M]]]",
   },
 ]
-
-export default items

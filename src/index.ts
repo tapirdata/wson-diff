@@ -1,8 +1,9 @@
-import debugFactory = require("debug")
-const debug = debugFactory("wson-diff:index")
+import debugFactory from "debug"
 
 import { PatchError } from "./patch"
 import { WsonDiff } from "./wson-diff"
+
+const debug = debugFactory("wson-diff:index")
 
 export interface Factory {
   (options: any): WsonDiff

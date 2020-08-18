@@ -1,12 +1,11 @@
+import * as _ from "lodash"
 import { expect } from "chai"
 import debugFactory = require("debug")
-import * as _ from "lodash"
 
-import { Key, Notifier, Patch } from "../src"
-import wsonDiff from "../src/"
+import wdiffFactory, { Key, Notifier, Patch } from "../src"
 import { saveRepr } from "./fixtures/helpers"
-import items from "./fixtures/notify-items"
-import setups from "./fixtures/setups"
+import { items } from "./fixtures/notify-items"
+import { setups } from "./fixtures/setups"
 
 const debug = debugFactory("wson-diff:test")
 
@@ -75,7 +74,7 @@ class MyNotifier implements Notifier {
 
 for (const setup of setups) {
   describe(setup.name, () => {
-    const wdiff = wsonDiff(setup.options)
+    const wdiff = wdiffFactory(setup.options)
     describe("notify", () => {
       for (const item of items) {
         debug("patch: have=%o, delta=%o", item.have, item.delta)

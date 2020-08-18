@@ -1,9 +1,10 @@
-import debugFactory = require("debug")
-const debug = debugFactory("wson-diff:notifier-target")
+import debugFactory from "debug"
 
 import { Notifier } from "./notifier"
 import { Key, Patch, Target } from "./target"
 import { ValueTarget } from "./value-target"
+
+const debug = debugFactory("wson-diff:notifier-target")
 
 export class NotifierTarget implements Target {
 
