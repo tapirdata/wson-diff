@@ -11,7 +11,7 @@ export interface Factory {
   PatchError: typeof PatchError;
 }
 
-const factory = ((createOptions: DiffOptions) => {
+const factory = ((createOptions: DiffOptions = {}) => {
   return new WsonDiff(createOptions);
 }) as Factory;
 

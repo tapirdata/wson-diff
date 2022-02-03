@@ -76,11 +76,11 @@ export class State {
     return delta;
   }
 
-  public getArrayDelta(have: AnyArray, wish: AnyArray, isRoot: boolean): string | null | undefined {
+  public getArrayDelta(have: AnyArray, wish: AnyArray, isRoot: boolean): Delta {
     this.wishStack.push(wish);
     this.haveStack.push(have);
     const diff = new ArrayDiff(this, have, wish);
-    let delta;
+    let delta = null;
     if (!diff.aborted) {
       delta = diff.getDelta(isRoot);
     }
@@ -92,7 +92,7 @@ export class State {
     return delta;
   }
 
-  public getDelta(have: Value, wish: Value, isRoot: boolean): string | null | undefined {
+  public getDelta(have: Value, wish: Value, isRoot: boolean): Delta {
     const { WSON } = this.differ.wdiff;
     const haveTi = WSON.getTypeid(have);
     const wishTi = WSON.getTypeid(wish);
@@ -142,7 +142,7 @@ export class Differ {
     this.arrayLimit = options.arrayLimit ?? wdOptions.arrayLimit;
   }
 
-  public diff(have: Value, wish: Value): string | null | undefined {
+  public diff(have: Value, wish: Value): Delta {
     const state = new State(this);
     return state.getDelta(have, wish, true);
   }

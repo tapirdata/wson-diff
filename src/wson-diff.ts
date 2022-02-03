@@ -29,17 +29,17 @@ export class WsonDiff {
     return new Differ(this, options);
   }
 
-  public diff(have: Value, wish: Value, options: DiffOptions): string | undefined | null {
+  public diff(have: Value, wish: Value, options: DiffOptions = {}): Delta {
     const differ = this.createDiffer(options);
     return differ.diff(have, wish);
   }
 
-  public patch(have: Value, delta: Delta, options: DiffOptions): Value {
+  public patch(have: Value, delta: Delta, options: DiffOptions = {}): Value {
     const patcher = this.createPatcher(options);
     return patcher.patch(have, delta, options ? options.notifiers : undefined);
   }
 
-  public patchTarget(target: Target, delta: Delta, options: DiffOptions): Value {
+  public patchTarget(target: Target, delta: Delta, options: PatchOptions = {}): Value {
     const patcher = this.createPatcher(options);
     return patcher.patchTarget(target, delta);
   }
