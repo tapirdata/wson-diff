@@ -276,7 +276,7 @@ Examples (with `stringEdge: 0`):
 ### Custom Objects
 
 The underlying WSON-processor may be created with `connectors` to support [custom objects](https://www.npmjs.com/package/wson#custom-objects). These **conectectors** can be augmented for wson-diff with these extra properties:
-- `key` (array): Instead of looking at all own properties `diff` just compares the properties referred by these keys. Thus you can hide private properties from **delta**.
+- `diffKeys` (array of strings): Instead of looking at all own properties `diff` just compares the properties referred by these keys. Thus you can hide private properties from **delta**.
 - `postpatch` (function): This function - if present - will be called (bound to the current object) after all patches have been applied. Thus you can update private properties thereafter.
 
 ---
