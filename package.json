@@ -1,6 +1,6 @@
 {
   "name": "wson-diff",
-  "version": "2.10.3",
+  "version": "2.10.4",
   "description": "Object diff and patch",
   "main": "./lib",
   "types": "./lib/index.d.ts",
