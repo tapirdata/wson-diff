@@ -1,35 +1,40 @@
-import addon from "wson-addon"
+import addon from 'wson-addon';
+import { DiffOptions } from '../../src/options';
 
-import { Foo, Point, Polygon } from "./extdefs"
+import { Foo, Point, Polygon } from './extdefs';
 
 const connectors = {
   Point,
   Polygon: {
     by: Polygon,
-    split(p: Polygon) {
-      return p.points
+    split(p: Polygon): Point[] {
+      return p.points;
     },
-    create(points: Point[]) {
-      return new Polygon(points)
+    create(points: Point[]): Polygon {
+      return new Polygon(points);
     },
   },
   Foo: {
     by: Foo,
-    split(foo: Foo) { return [foo.circumference, foo.h, foo.w] },  // add circumference as noise
-    postcreate(foo: Foo, args: any[]) {
-      [, foo.h, foo.w] = args
-      return foo
+    split(foo: Foo): number[] {
+      return [foo.circumference, foo.h, foo.w]; // add circumference as noise
     },
-    diffKeys: ["h", "w"],
-    postpatch(foo: Foo) {
-      foo.setupArea()
+    postcreate(foo: Foo, args: number[]): Foo {
+      [, foo.h, foo.w] = args;
+      return foo;
+    },
+    diffKeys: ['h', 'w'],
+    postpatch(foo: Foo): void {
+      foo.setupArea();
     },
   },
-}
+};
 
-export const setups = [
+console.log('connectors=', connectors);
+
+export const setups: { name: string; options: DiffOptions }[] = [
   {
-    name: "basic js",
+    name: 'basic js',
     options: {
       wsonOptions: {
         connectors,
@@ -38,7 +43,7 @@ export const setups = [
     },
   },
   {
-    name: "basic with addon",
+    name: 'basic with addon',
     options: {
       wsonOptions: {
         connectors,
@@ -46,4 +51,4 @@ export const setups = [
       },
     },
   },
-]
+];

@@ -1,47 +1,46 @@
-import * as _ from "lodash"
-import debugFactory from "debug"
-import wsonFactory, { Wson } from "wson"
+import * as _ from 'lodash';
+import debugFactory from 'debug';
+import wsonFactory, { Wson } from 'wson';
 
-import { Differ } from "./diff"
-import { Delta, Patcher } from "./patch"
-import { Target } from "./target"
+import { Delta, Value } from './types';
+import { Differ } from './diff';
+import { Patcher } from './patch';
+import { Target } from './target';
+import { DiffOptions, PatchOptions } from './options';
 
-const debug = debugFactory("wson-diff:wson-diff")
+const _debug = debugFactory('wson-diff:wson-diff');
 
 export class WsonDiff {
+  public WSON: Wson;
 
-  public WSON: Wson
-  public options: any
-
-  constructor(options: any = {}) {
-    let { WSON } = options
+  constructor(public options: DiffOptions = {}) {
+    let { WSON } = options;
     if (WSON == null) {
-      WSON = wsonFactory(options.wsonOptions)
+      WSON = wsonFactory(options.wsonOptions);
     }
-    this.WSON = WSON
-    this.options = options
+    this.WSON = WSON;
   }
 
-  public createPatcher(options: any = {}) {
-    return new Patcher(this, options)
+  public createPatcher(options: PatchOptions = {}): Patcher {
+    return new Patcher(this, options);
   }
 
-  public createDiffer(options: any = {}) {
-    return new Differ(this, options)
+  public createDiffer(options: DiffOptions = {}): Differ {
+    return new Differ(this, options);
   }
 
-  public diff(have: any, wish: any, options: any) {
-    const differ = this.createDiffer(options)
-    return differ.diff(have, wish)
+  public diff(have: Value, wish: Value, options: DiffOptions): string | undefined | null {
+    const differ = this.createDiffer(options);
+    return differ.diff(have, wish);
   }
 
-  public patch(have: any, delta: Delta, options: any) {
-    const patcher = this.createPatcher(options)
-    return patcher.patch(have, delta, options ? options.notifiers : undefined)
+  public patch(have: Value, delta: Delta, options: DiffOptions): Value {
+    const patcher = this.createPatcher(options);
+    return patcher.patch(have, delta, options ? options.notifiers : undefined);
   }
 
-  public patchTarget(target: Target, delta: Delta, options: any) {
-    const patcher = this.createPatcher(options)
-    return patcher.patchTarget(target, delta)
+  public patchTarget(target: Target, delta: Delta, options: DiffOptions): Value {
+    const patcher = this.createPatcher(options);
+    return patcher.patchTarget(target, delta);
   }
 }

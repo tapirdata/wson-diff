@@ -5,10 +5,12 @@
   "main": "./lib",
   "types": "./lib/index.d.ts",
   "scripts": {
-    "test": "mocha --require ts-node/register --extension ts",
-    "lint": "tslint \"src/**/*.ts\" \"test/**/*.ts\"",
-    "build": "tsc",
-    "prepublishOnly": "npm test && npm run lint && npm run build"
+    "build-lib": "tsc",
+    "build": "npm run build-lib",
+    "lint": "eslint src/**/*.ts test/**/*.ts",
+    "prettify": "prettier -w src/**/* test/**/*",
+    "prepublishOnly": "npm test && npm run lint && npm run build",
+    "test": "mocha --require ts-node/register --extension ts"
   },
   "keywords": [
     "WSON",
@@ -28,22 +30,27 @@
     "url": "tapirdata/wson-diff"
   },
   "devDependencies": {
-    "@types/chai": "^4.2.12",
-    "@types/mocha": "^8.0.3",
-    "@types/node": "^14.6.0",
-    "chai": "^4.2.0",
-    "mocha": "^8.1.1",
-    "ts-node": "^8.10.2",
-    "tslint": "^6.1.3",
-    "typescript": "^3.9.7",
-    "wson-addon": "^2.7.1"
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^9.1.0",
+    "@types/node": "^17.0.14",
+    "@typescript-eslint/eslint-plugin": "^5.10.2",
+    "@typescript-eslint/parser": "^5.10.2",
+    "chai": "^4.3.6",
+    "eslint": "^8.8.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "mocha": "^9.2.0",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.5",
+    "wson-addon": "^2.10.0"
   },
   "dependencies": {
-    "@types/debug": "^4.1.5",
-    "@types/lodash": "^4.14.159",
-    "debug": "^4.1.1",
-    "lodash": "^4.17.20",
-    "mdiff": "^1.3.1",
-    "wson": "^2.8.2"
+    "@types/debug": "^4.1.7",
+    "@types/lodash": "^4.14.178",
+    "assert": "^2.0.0",
+    "debug": "^4.3.3",
+    "lodash": "^4.17.21",
+    "mdiff": "^1.4.2",
+    "wson": "^2.10.1"
   }
 }

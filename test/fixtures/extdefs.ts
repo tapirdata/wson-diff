@@ -1,50 +1,41 @@
-// tslint:disable:max-classes-per-file
+export type PointArgs = [number, number];
 
 export class Point {
-
-  public x?: number
-  public y?: number
-
-  constructor(x: number = 0, y: number = 0) {
-    this.__wsonpostcreate__([x, y])
+  constructor(public x = 0, public y = 0) {
+    this.__wsonpostcreate__([x, y]);
   }
 
-  public __wsonsplit__() {
-    return [this.x, this.y]
+  __wsonsplit__(): PointArgs {
+    return [this.x, this.y];
   }
 
-  public __wsonpostcreate__(args: number[]) {
-    [this.x, this.y] = args
+  __wsonpostcreate__(args: PointArgs): void {
+    [this.x, this.y] = args;
   }
-
 }
 
 export class Polygon {
-
-  public points: Point[]
+  public points: Point[];
 
   constructor(points: Point[] = []) {
-    this.points = points
+    this.points = points;
   }
 }
+export type FooValue = number;
+export type FooArgs = [FooValue, FooValue];
 
 export class Foo {
+  public area!: number;
 
-  public w: number
-  public h: number
-  public area!: number
-
-  constructor(w: number, h: number) {
-    this.w = w
-    this.h = h
-    this.setupArea()
+  constructor(public w: number, public h: number) {
+    this.setupArea();
   }
 
-  public setupArea() {
-    this.area = this.w * this.h
+  public setupArea(): void {
+    this.area = this.w * this.h;
   }
 
-  get circumference() {
-    return this.w + this.h
+  get circumference(): number {
+    return this.w + this.h;
   }
 }
