@@ -30,8 +30,6 @@ const connectors = {
   },
 };
 
-console.log('connectors=', connectors);
-
 export const setups: { name: string; options: DiffOptions }[] = [
   {
     name: 'basic js',

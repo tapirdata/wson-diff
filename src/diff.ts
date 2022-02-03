@@ -64,7 +64,7 @@ export class State {
     this.wishStack.push(wish);
     this.haveStack.push(have);
     const diff = new ObjectDiff(this, have, wish);
-    let delta;
+    let delta: Delta = null;
     if (!diff.aborted) {
       delta = diff.getDelta(isRoot);
     }

@@ -21,7 +21,6 @@ export class ObjectDiff {
   public getDelta(isRoot: boolean): Delta {
     const { have } = this;
     const { wish } = this;
-    debug('getDelta(have=%o, wish=%o, isRoot=%o)', have, wish, isRoot);
     let delta = '';
     const { state } = this;
 
@@ -29,7 +28,6 @@ export class ObjectDiff {
     if (have.constructor != null && have.constructor !== Object) {
       const connector = state.differ.wdiff.WSON.connectorOfValue(have);
       diffKeys = connector ? (connector as DiffConnector).diffKeys ?? null : null;
-      console.log('diffKeys=', diffKeys, 'connector=', connector);
     }
 
     let delCount = 0;

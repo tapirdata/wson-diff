@@ -20,3 +20,4 @@ factory.PatchError = PatchError;
 export default factory;
 export { Notifier } from './notifier';
 export { Key, Patch, Target } from './target';
+export { Delta } from './types';

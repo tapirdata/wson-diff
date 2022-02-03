@@ -91,7 +91,7 @@ for (const setup of setups) {
         }
         describe(item.description, () => {
           describe(`patch ${safeRepr(item.have)} with ${safeRepr(item.delta)}`, () => {
-            patcher.patch(item.have, item.delta, notifiers);
+            patcher.patch(item.have, item.delta ?? null, notifiers);
             it(`should notify ${safeRepr(item.nfys0)}.`, () => expect(notifier0.nfys).to.be.deep.equal(item.nfys0));
             if (item.budgeTest1 != null) {
               it(`should also notify ${safeRepr(item.nfys1)}.`, () =>
