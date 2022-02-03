@@ -1,9 +1,6 @@
 # wson-diff
 
 [![npm version](https://img.shields.io/npm/v/wson-diff.svg?style=flat-square)](https://www.npmjs.com/package/wson-diff)
-[![Build Status](https://secure.travis-ci.org/tapirdata/wson-diff.png?branch=master)](https://travis-ci.org/tapirdata/wson-diff)
-[![Dependency Status](https://david-dm.org/tapirdata/wson-diff.svg)](https://david-dm.org/tapirdata/wson-diff) 
-[![devDependency Status](https://david-dm.org/tapirdata/wson-diff/dev-status.svg)](https://david-dm.org/tapirdata/wson-diff#info=devDependencies)
 >  A differ/patcher for arbitrary values that presents delta in a terse WSON-like format.
 
 [WSON](https://www.npmjs.com/package/wson) can be used to stringify structured data, transmit that string to some receiver, where it can be parsed to reconstruct that original data. Now both ends posses that identical data. If now that data happens to change a little, why should we retransmit that whole redundant information? This is where wson-diff comes in:
