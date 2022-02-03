@@ -7,7 +7,7 @@ import { WsonDiff } from './wson-diff';
 const _debug = debugFactory('wson-diff:index');
 
 export interface Factory {
-  (options: DiffOptions): WsonDiff;
+  (options?: DiffOptions): WsonDiff;
   PatchError: typeof PatchError;
 }
 
